@@ -1,6 +1,6 @@
 {
     "name": "extensionrunner",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Import external modules safely from npm or github",
     "scripts": {
         "clear": "rm -rf *.{js,d.ts}",
