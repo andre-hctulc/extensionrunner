@@ -3,4 +3,3 @@ node_modules
 *.d.ts
 Todo.md
 **/.DS_Store
-test-module
