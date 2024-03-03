@@ -1,0 +1,6 @@
+node_modules
+*.js
+*.d.ts
+Todo.md
+**/.DS_Store
+test-module

@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "target": "es2020",
+        "module": "es2020",
+        "lib": ["dom"],
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true,
+        "moduleResolution": "node",
+        "resolveJsonModule": true,
+        "outDir": ".",
+        "declaration": true
+    },
+    "include": ["src/*.ts"],
+    "exclude": ["src/worker.ts", "src/Adapter.ts", "node_modules"]
+}
