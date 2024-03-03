@@ -1,4 +1,4 @@
-import { receiveData } from "./shared.js";
+import { Events, receiveData } from "./shared.js";
 import { EventType, Operation, OperationArgs, Operations } from "./types.js";
 
 /*
@@ -6,12 +6,15 @@ Worker env
 */
 
 /** Represents an iframe or a worker */
-class Adapter<I extends Operations, O extends Operations, S = any> {
+class Adapter<I extends Operations, O extends Operations, S = any> extends Events<
+    EventType<I>,
+    (payload: OperationArgs<I, `event_${EventType<I>}`>) => void
+> {
     // OPTIONS
 
     onError?: (err: Error) => void;
     onPushState?: (newState: S) => void;
-    onEvent?: (type: EventType<I>, payload: OperationArgs<I, `event_${EventType<I>}`>) => void;
+
     /**
      * Max time to wait for operation result
      */
@@ -22,6 +25,7 @@ class Adapter<I extends Operations, O extends Operations, S = any> {
     // MESSGAES
 
     constructor() {
+        super();
         // handle messages
         self.onmessage = async e => {
             if (typeof e?.data?.__type !== "string") return;
@@ -31,7 +35,7 @@ class Adapter<I extends Operations, O extends Operations, S = any> {
                     this.onPushState?.(e.data.state);
                     break;
                 case "event":
-                    this.onEvent?.(e.data.event, e.data.args);
+                    this.notifyListeners?.(e.data.event, e.data.args);
                     break;
                 case "operation":
                     const { args, operation, port } = e.data;
@@ -93,5 +97,3 @@ class Adapter<I extends Operations, O extends Operations, S = any> {
 const adapter = new Adapter();
 
 export default adapter;
-
-export type { Adapter };

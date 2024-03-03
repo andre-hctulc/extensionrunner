@@ -1,3 +1,4 @@
-# webex
+# extensionrunner
+**This pcakage is currently ecperimental**
 
-_webex_ is a tool, to import external packages safely in your web apps.
+_extensionrunner_ is a tool, to import external packages safely in your web apps.

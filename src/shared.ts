@@ -38,3 +38,17 @@ export async function receiveData(target: Worker | Window, messageType: string, 
         else target.postMessage({ __type: messageType, ...data }, "*", [in_, ...transfer]);
     });
 }
+
+export class Events<T extends string, L extends (...args: any) => void> {
+    #listeners = new Map<T, Set<L>>();
+    addEventListener(type: T, listener: L) {
+        if (!this.#listeners.has(type)) this.#listeners.set(type, new Set());
+        this.#listeners.get(type)?.add(listener);
+    }
+    removeEventListener(type: T, listener: L) {
+        this.#listeners.get(type)?.delete(listener);
+    }
+    protected notifyListeners(type: T, ...args: Parameters<L>) {
+        this.#listeners.get(type)?.forEach(listener => listener(...(args as any)));
+    }
+}

@@ -1,8 +1,7 @@
 {
-    "name": "webex",
+    "name": "extensionrunner",
     "version": "1.0.0",
-    "private": true,
-    "description": "Import external modules safely frpm npm or github",
+    "description": "Import external modules safely from npm or github",
     "scripts": {
         "clear": "rm -rf *.{js,d.ts}",
         "tc": "echo worker && tsc --project worker.tsconfig.json --noEmit && echo browser && tsc --project browser.tsconfig.json --noEmit",
@@ -10,10 +9,11 @@
         "postbuild": "node scripts/workercode.js"
     },
     "author": "",
+    "type": "module",
     "license": "ISC",
     "main": "index.js",
     "exports": {
-        "./adapter": "./adapter.js",
+        "./adapter": "./Adapter.js",
         ".": "./index.js"
     }
 }

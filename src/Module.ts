@@ -18,7 +18,7 @@ export interface ModuleOptions<I extends Operations, O extends Operations, S = a
 }
 
 /** Represents an iframe or a worker */
-export default class Module<I extends Operations, O extends Operations, S = any> {
+export class Module<I extends Operations, O extends Operations, S = any> {
     constructor(readonly target: Window | Worker, readonly meta: Meta, private out: O, protected options: ModuleOptions<I, O, S>) {
         // this es called for extension workers internally after import
         if (!(target instanceof Worker)) {

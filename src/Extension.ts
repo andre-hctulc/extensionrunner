@@ -1,5 +1,5 @@
-import Module from "./Module.js";
-import { relPath } from "./shared.js";
+import { Module } from "./Module.js";
+import { Events, relPath } from "./shared.js";
 import type { Meta, MetaExtension, Operations } from "./types.js";
 import * as worker from "./worker.js";
 
@@ -10,7 +10,6 @@ export type ExtensionInit = {
     /** npm version or git commit sha */
     version: string;
     onError?: (err: Error) => void;
-    onEvent?: (type: string, payload: any, source: Module<any, any, any>) => void;
     onPushState?: (newState: any, source: Module<any, any, any>) => void;
     /**
      * Time in milliseconds to wait for a module operation to complete
@@ -38,7 +37,7 @@ export interface PackageJSON {
     keywords: string[];
 }
 
-export class Extension {
+export class Extension extends Events<string, (payload: any, module: Module<any, any, any>) => void> {
     readonly url: string = "";
     readonly staticParams: string = "";
     private _pkg: Partial<PackageJSON> = {};
@@ -47,6 +46,7 @@ export class Extension {
     private cache = new Map<string, { instances: Map<Module<any, any, any>, { state?: { data: any } }>; sharedState: any }>();
 
     constructor(private init: ExtensionInit) {
+        super();
         if (this.type === "github") {
             const [owner, repo] = this.init.name.split("/");
             this.url = `https://api.github.com/repos/${owner}/${repo}/contents/`;
@@ -161,7 +161,7 @@ export class Extension {
                 this.init.onPushState?.(newState, mod);
             },
             onEvent: (type, payload) => {
-                this.init.onEvent?.(type, payload, mod);
+                this.notifyListeners?.(type, payload, mod);
             },
             operationTimeout: this.init.operationTimeout,
             connectionTimeout: this.init.connectionTimeout,
