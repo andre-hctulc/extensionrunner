@@ -4,7 +4,7 @@
         {
             "name": "run test",
             "type": "chrome",
-            "webRoot": "${workspaceFolder}/test",
+            "webRoot": "${workspaceFolder}/test/dist/",
             "request": "launch",
             "url": "http://localhost:3444"
         }

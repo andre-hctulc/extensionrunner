@@ -9,7 +9,7 @@ export function getMessageData(e: MessageEvent, type: string): Record<string, an
     return null;
 }
 
-export async function receiveData(target: Worker | Window, messageType: string, data: object, transfer: Transferable[], errTimeout = 5000) {
+export async function receiveData(target: Worker | Window, type: string, data: object, transfer: Transferable[], errTimeout = 5000) {
     return new Promise<any>((resolve, reject) => {
         const channel = new MessageChannel();
         const out = channel.port1;
@@ -20,8 +20,8 @@ export async function receiveData(target: Worker | Window, messageType: string, 
             if (!resolved) reject(new Error("Operation timeout"));
         }, errTimeout || 5000);
 
-        _in.onmessage = async e => {
-            const data = getMessageData(e, messageType + ":result");
+        out.onmessage = async e => {
+            const data = getMessageData(e, type + ":result");
             if (data) {
                 resolved = true;
                 resolve(data.payload);
@@ -34,8 +34,8 @@ export async function receiveData(target: Worker | Window, messageType: string, 
             reject(new Error("Channel Error (out)"));
         };
 
-        if (target instanceof Worker) target.postMessage({ ...data, __type: messageType, __port: _in }, { transfer: [_in, ...transfer] });
-        else target.postMessage({ __type: messageType, ...data }, "*", [_in, ...transfer]);
+        if (target instanceof Worker) target.postMessage({ ...data, __type: type, __port: _in }, { transfer: [_in, ...transfer] });
+        else target.postMessage({ ...data, __type: type, __port: _in }, "*", [_in, ...transfer]);
     });
 }
 

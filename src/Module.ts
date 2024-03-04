@@ -26,8 +26,6 @@ export class Module<I extends Operations, O extends Operations, S = any> {
             let resolved = false;
             // handle messages
             this.target.onmessage = async e => {
-                console.log("MESG");
-
                 if (typeof e?.data?.__type !== "string") return;
                 const type = e.data.__type;
                 switch (type) {
@@ -44,13 +42,11 @@ export class Module<I extends Operations, O extends Operations, S = any> {
                         if (!port) return this.err("Operation Channel Error", "Port not found");
 
                         const op = await this.out[operation];
+                        if (typeof op !== "function") return this.err("Operation not found", null);
 
                         (port as MessagePort).onmessageerror = e => {
                             this.err("Operation Channel Error", e);
                         };
-
-                        if (typeof op !== "function") return this.err("Operation not found", null);
-
                         try {
                             const result = await op(...args);
                             (port as MessagePort).postMessage({ __type: "operation:result", payload: result });
