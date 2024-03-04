@@ -31,12 +31,17 @@ self.onmessage = async e => {
         if (meta.type === "npm") {
             importUrl = "https://unpkg.com/" + meta.name + "@" + meta.version + "/" + meta.path;
         } else if (meta.type === "github") {
+            // Use jsdelivr for github, as github does not support Commit shas or CORS
             const [owner, repo] = meta.name.split("/");
-            importUrl = "github:" + owner + "/" + repo + "@" + meta.version;
+            importUrl = "https://cdn.jsdelivr.net/gh/" + owner + "/" + repo + "@" + meta.version + "/" + meta.path;
         } else throw new Error("Invalid type ('npm' or 'github' expected)");
 
-        const mod = await import(importUrl);
-        
-        postMessage({ __type: "ready" });
+        try {
+            const mod = await import(importUrl);
+            postMessage({ __type: "ready" });
+        } catch (err) {
+            console.error("Failed to import module", err);
+            postMessage({ __type: "init_error" });
+        }
     }
 };
