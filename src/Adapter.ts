@@ -38,7 +38,10 @@ class Adapter<I extends Operations, O extends Operations, S = any> extends Event
                     this.notifyListeners?.(e.data.event, e.data.args);
                     break;
                 case "operation":
-                    const { args, operation, port } = e.data;
+                    const { args, operation, __port: port } = e.data;
+
+                    if (!port) return this.err("Operation Channel Error", "Port not found");
+
                     const op = await this.out?.[operation];
 
                     (port as MessagePort).onmessageerror = e => {
@@ -48,7 +51,7 @@ class Adapter<I extends Operations, O extends Operations, S = any> extends Event
                     if (typeof op !== "function") return this.err("Operation not found", null);
 
                     try {
-                        const result = await op(...args);
+                        const result = await op(...(args || []));
                         (port as MessagePort).postMessage({ __type: "operation:result", payload: result });
                     } catch (err) {
                         return this.err("Operation Execution Error", err);

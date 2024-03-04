@@ -13,29 +13,29 @@ export async function receiveData(target: Worker | Window, messageType: string, 
     return new Promise<any>((resolve, reject) => {
         const channel = new MessageChannel();
         const out = channel.port1;
-        const in_ = channel.port2;
+        const _in = channel.port2;
         let resolved = false;
 
         setTimeout(() => {
             if (!resolved) reject(new Error("Operation timeout"));
         }, errTimeout || 5000);
 
-        in_.onmessage = async e => {
+        _in.onmessage = async e => {
             const data = getMessageData(e, messageType + ":result");
             if (data) {
                 resolved = true;
                 resolve(data.payload);
             }
         };
-        in_.onmessageerror = e => {
+        _in.onmessageerror = e => {
             reject(new Error("Channel Error (in)"));
         };
         out.onmessageerror = e => {
             reject(new Error("Channel Error (out)"));
         };
 
-        if (target instanceof Worker) target.postMessage({ __type: messageType, ...data }, { transfer: [in_, ...transfer] });
-        else target.postMessage({ __type: messageType, ...data }, "*", [in_, ...transfer]);
+        if (target instanceof Worker) target.postMessage({ ...data, __type: messageType, __port: _in }, { transfer: [_in, ...transfer] });
+        else target.postMessage({ __type: messageType, ...data }, "*", [_in, ...transfer]);
     });
 }
 

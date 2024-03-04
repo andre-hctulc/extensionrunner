@@ -39,7 +39,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
                         this.options.onEvent?.(e.data.event, e.data.args);
                         break;
                     case "operation":
-                        const { args, operation, port } = e.data;
+                        const { args, operation, __port: port } = e.data;
                         const op = await this.out[operation];
 
                         (port as MessagePort).onmessageerror = e => {
