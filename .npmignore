@@ -3,3 +3,5 @@ test-module
 src
 *.tsconfig.json
 webpack.config.js
+scripts
+.vscode
