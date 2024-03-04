@@ -9,6 +9,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "extensionrunner": "^1.0.3"
+    "extensionrunner": "^1.0.4"
   }
 }

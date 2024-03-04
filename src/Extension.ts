@@ -76,7 +76,6 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         path = relPath(path || "");
         /** The worker code is transformed to a string on build, so we can alwys import it here and start the worker */
         const workerCode = (worker as any).code;
-        alert(workerCode);
         const blob = new Blob([workerCode], { type: "application/javascript" });
         const url = URL.createObjectURL(blob); // TODO revoke object url
         const worker_ = new Worker(url);

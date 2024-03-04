@@ -7,7 +7,7 @@ See script test:build
 
 const config = {
     output: {
-        path: path.resolve("./test/dist/"),
+        path: path.resolve("./test/bundle/"),
     },
     plugins: [
         new HtmlBundlerPlugin({
