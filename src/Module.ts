@@ -79,7 +79,10 @@ export class Module<I extends Operations, O extends Operations, S = any> {
                 this.err("Message Error", e);
             };
             this.target.onerror = (e: any) => {
-                this.err("Uncaught Error", e);
+                if (!resolved) {
+                    resolved = true;
+                    reject(this.err("Initialization Error", e));
+                } else this.err("Uncaught Error", e);
             };
 
             // Post meta, so the worker knows which module to import (for workers)
