@@ -19,15 +19,40 @@ export interface ModuleOptions<I extends Operations, O extends Operations, S = a
 
 /** Represents an iframe or a worker */
 export class Module<I extends Operations, O extends Operations, S = any> {
-    constructor(readonly target: Window | Worker, readonly meta: Meta, private out: O, protected options: ModuleOptions<I, O, S>) {}
+    constructor(
+        readonly origin: string,
+        readonly target: MessageEventSource,
+        readonly meta: Meta,
+        private out: O,
+        protected options: ModuleOptions<I, O, S>
+    ) {}
+
+    private inited = false;
+    private started = false;
 
     async start(): Promise<this> {
+        if (this.started) return this;
+
+        this.started = true;
+
         return new Promise<this>((resolve, reject) => {
+            // In CORS context target is Window (iframe.contentWindow)
+            // We cant define target.onmessage or target.onerror on a cross origin Window
+            // Thats why we listen to the message event on the global object and check the source
+
             let resolved = false;
+
             // handle messages
-            this.target.onmessage = async e => {
+            // on global object as cross origin iframes do not allow to listen to messages on the iframe.contentWindow object
+            (window as Window).onmessage = async e => {
+                // authenticate
+                if (e.origin !== this.origin) return false;
+                if (e.data?.__token !== this.meta.authToken) return false;
+
                 if (typeof e?.data?.__type !== "string") return;
+
                 const type = e.data.__type;
+
                 switch (type) {
                     case "state_push":
                         this._state = e.data.state;
@@ -57,36 +82,34 @@ export class Module<I extends Operations, O extends Operations, S = any> {
                         break;
                     case "ready":
                         resolved = true;
-                        // init postMessage (received by worker.ts or iframe)
-                        const events = new MessageChannel();
-                        const eventsIn = events.port1;
-                        const eventsOut = events.port2;
 
-                        eventsIn.onmessageerror = e => {
-                            this.err("Events Channel (in) Error", e);
-                        };
+                        // init events once
+                        if (!this.inited) {
+                            this.inited = true;
 
-                        eventsOut.onmessageerror = e => {
-                            this.err("Events Channel (out) Error", e);
-                        };
-                        resolve(this);
+                            // init postMessage (received by worker.ts or iframe)
+                            const events = new MessageChannel();
+                            const eventsIn = events.port1;
+                            const eventsOut = events.port2;
+
+                            eventsIn.onmessageerror = e => {
+                                this.err("Events Channel (in) Error", e);
+                            };
+
+                            eventsOut.onmessageerror = e => {
+                                this.err("Events Channel (out) Error", e);
+                            };
+                            resolve(this);
+                        }
+
                         break;
                 }
             };
-            // errors
-            this.target.onmessageerror = (e: any) => {
-                this.err("Message Error", e);
-            };
-            this.target.onerror = (e: any) => {
-                if (!resolved) {
-                    resolved = true;
-                    reject(this.err("Initialization Error", e));
-                } else this.err("Uncaught Error", e);
-            };
 
-            // Post meta, so the worker knows which module to import (for workers)
-            // iframes do not neccessarily need this
-            this.target.postMessage({ __type: "meta", meta: this.meta });
+            // Post meta:
+            // - Workers need this to import the module in the worker initialization, whoich dynamicaally imports the module
+            // - Iframes need this to init their meta
+            this.target.postMessage({ __type: "meta", meta: this.meta }, { targetOrigin: "*" });
 
             setTimeout(() => {
                 if (!resolved) reject(this.err("Connection timeout", null));
@@ -109,8 +132,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
     }
 
     protected postMessage(type: string, data: object, transfer?: Transferable[]) {
-        if (this.target instanceof Worker) this.target.postMessage({ __type: type, ...data }, { transfer });
-        else if (this.target) this.target.postMessage({ __type: type, ...data }, "*", transfer);
+        this.target.postMessage({ ...data, __type: type }, { transfer });
     }
 
     async execute<T extends Operation<O>>(operation: T, ...args: OperationArgs<O, T>): Promise<OperationArgs<O, T>> {

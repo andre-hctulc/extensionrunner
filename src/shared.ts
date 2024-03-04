@@ -9,7 +9,14 @@ export function getMessageData(e: MessageEvent, type: string): Record<string, an
     return null;
 }
 
-export async function receiveData(target: Worker | Window, type: string, data: object, transfer: Transferable[], errTimeout = 5000) {
+export function randomId() {
+    const timestamp = new Date().getTime();
+    const random = Math.random().toString(36).substr(2, 9); // Extracting 9 characters
+
+    return `${timestamp}${random}`;
+}
+
+export async function receiveData(target: MessageEventSource, type: string, data: object, transfer: Transferable[], errTimeout = 5000) {
     return new Promise<any>((resolve, reject) => {
         const channel = new MessageChannel();
         const out = channel.port1;
@@ -34,8 +41,7 @@ export async function receiveData(target: Worker | Window, type: string, data: o
             reject(new Error("Channel Error (out)"));
         };
 
-        if (target instanceof Worker) target.postMessage({ ...data, __type: type, __port: _in }, { transfer: [_in, ...transfer] });
-        else target.postMessage({ ...data, __type: type, __port: _in }, "*", [_in, ...transfer]);
+        target.postMessage({ ...data, __type: type, __port: _in }, { transfer: [_in, ...transfer] });
     });
 }
 

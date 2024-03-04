@@ -1,5 +1,5 @@
 import { Module } from "./Module.js";
-import { Events, relPath } from "./shared.js";
+import { Events, randomId, relPath } from "./shared.js";
 import type { Meta, MetaExtension, Operations } from "./types.js";
 import * as worker from "./worker.js";
 
@@ -38,6 +38,7 @@ export interface PackageJSON {
 }
 
 export class Extension extends Events<string, (payload: any, module: Module<any, any, any>) => void> {
+    readonly origin: string;
     readonly url: string = "";
     private _pkg: Partial<PackageJSON> = {};
     private started = false;
@@ -48,9 +49,11 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         super();
         if (this.type === "github") {
             const [owner, repo] = this.init.name.split("/");
-            this.url = `https://cdn.jsdelivr.net/gh/${owner}/${repo}@${init.version}/`;
+            this.origin = "https://cdn.jsdelivr.net";
+            this.url = `${this.origin}/gh/${owner}/${repo}@${init.version}/`;
         } else if (this.type === "npm") {
-            this.url = `https://unpkg.com/${this.init.name}@${this.init.version}/`;
+            this.origin = "https://unpkg.com";
+            this.url = `${this.origin}/${this.init.name}@${this.init.version}/`;
         } else throw new Error("Invalid type ('npm' or 'github' expected)");
     }
 
@@ -77,7 +80,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         const blob = new Blob([workerCode], { type: "application/javascript" });
         const url = URL.createObjectURL(blob); // TODO revoke object url
         const worker_ = new Worker(url, { type: "module" });
-        const mod: Module<any, any, any> = this.initModule(worker_, path, out, meta);
+        const mod: Module<any, any, any> = this.initModule(worker_ as any, path, out, meta);
 
         return mod.start();
     }
@@ -115,19 +118,20 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
     }
 
     private initModule<I extends Operations, O extends Operations, S = any>(
-        target: Worker | Window,
+        target: MessageEventSource,
         path: string,
         out: O,
         meta?: MetaExtension
     ): Module<I, O, S> {
-        const id = `iframe:${path}`;
+        const moduleName = `iframe:${path}`;
 
-        // extend meta
+        // genrate random id
 
         let _meta: Meta = {
+            authToken: randomId(),
             name: this.init.name,
             path,
-            state: this.cache.get(id)?.sharedState,
+            state: this.cache.get(moduleName)?.sharedState,
             version: this.init.version,
             type: this.init.type,
         };
@@ -137,9 +141,9 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
 
         // create module
 
-        const mod = new Module<I, O, S>(target, _meta, out, {
+        const mod = new Module<I, O, S>(this.origin, target, _meta, out, {
             onPushState: (newState, populate) => {
-                if (populate) this.pushState(id, newState, undefined, [mod]);
+                if (populate) this.pushState(moduleName, newState, undefined, [mod]);
                 this.init.onPushState?.(newState, mod);
             },
             onEvent: (type, payload) => {
@@ -151,10 +155,10 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
 
         // cache
 
-        let instances = this.cache.get(id)?.instances;
+        let instances = this.cache.get(moduleName)?.instances;
         if (!instances) {
             instances = new Map();
-            this.cache.set(id, { instances, sharedState: undefined });
+            this.cache.set(moduleName, { instances, sharedState: undefined });
         }
         instances.set(mod, { state: undefined });
 

@@ -10,6 +10,7 @@ export type EventListener<I extends Operations, T extends EventType<I> | null> =
 
 /** module augmentation */
 export interface Meta<S = any> {
+    authToken: string;
     name: string;
     path: string;
     state: S | undefined;

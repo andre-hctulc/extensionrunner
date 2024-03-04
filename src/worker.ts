@@ -8,6 +8,7 @@ let started = false;
 
 const isNonEmptyStr = (s: any) => !!s && typeof s === "string";
 
+// First message must be the meta!
 self.onmessage = async e => {
     if (started) return;
     started = true;
@@ -21,14 +22,15 @@ self.onmessage = async e => {
         if (!isNonEmptyStr(meta.version)) throw new Error("Invalid name");
         if (!isNonEmptyStr(meta.path)) throw new Error("Invalid version");
 
-        // set meta globally
-        (self as any).__meta = meta;
+        // init meta
+        (self as any).meta = meta;
 
         // import module (for side effects - imported modules should use `Adapter`)
         let importUrl: string;
 
         // do not use template strings here, post build script wraps this code in ``
         if (meta.type === "npm") {
+            // unpkg
             importUrl = "https://unpkg.com/" + meta.name + "@" + meta.version + "/" + meta.path;
         } else if (meta.type === "github") {
             // Use jsdelivr for github, as github does not support Commit shas or CORS
@@ -38,10 +40,9 @@ self.onmessage = async e => {
 
         try {
             const mod = await import(importUrl);
-            postMessage({ __type: "ready" });
+            postMessage({ __type: "ready", __token: meta.authToken });
         } catch (err) {
             console.error("Failed to import module", err);
-            postMessage({ __type: "init_error" });
         }
     }
 };

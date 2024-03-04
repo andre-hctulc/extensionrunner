@@ -1,17 +1,34 @@
-import { Events, receiveData } from "./shared.js";
-import { EventType, Operation, OperationArgs, Operations } from "./types.js";
+import { Events, getMessageData, receiveData } from "./shared.js";
+import { EventType, Meta, Operation, OperationArgs, Operations } from "./types.js";
 
 /*
-Worker env
+Runs in Worker/IFrame
 */
 
-/** Represents an iframe or a worker */
-class Adapter<I extends Operations, O extends Operations, S = any> extends Events<
-    EventType<I>,
-    (payload: OperationArgs<I, `event_${EventType<I>}`>) => void
-> {
-    // OPTIONS
+// Listen to meta init
 
+// - For iframes meta initialization
+// - For Modules the meta gets posted to the worker initialization which dynamically imports the module (and this file)
+//   which means the meta should already be defined
+const metaListener: (e: MessageEvent) => void = (e: MessageEvent) => {
+    if ((globalThis as any).meta && typeof (globalThis as any).meta === "object") return removeEventListener("message", metaListener);
+
+    const d = getMessageData(e, "meta");
+
+    if (d) {
+        (globalThis as any).meta = d.meta;
+        removeEventListener("message", metaListener);
+        // notify ready
+        postMessage({ __type: "ready", __token: d.meta.authToken });
+    }
+};
+
+addEventListener("message", metaListener);
+
+export type AdapterInit<I extends Operations, O extends Operations, S = any> = {
+    /** URL, origin of the provider app */
+    provider: string;
+    out: O;
     onError?: (err: Error) => void;
     onPushState?: (newState: S) => void;
 
@@ -20,19 +37,32 @@ class Adapter<I extends Operations, O extends Operations, S = any> extends Event
      */
     operationTimeout?: number;
     initialState?: S;
-    out = {} as O;
+    // TODO mommentarily only provider is allowed
+    allowOrigins?: string[];
+};
 
-    // MESSGAES
-
-    constructor() {
+/** Represents an iframe or a worker */
+export default class Adapter<I extends Operations, O extends Operations, S = any> extends Events<
+    EventType<I>,
+    (payload: OperationArgs<I, `event_${EventType<I>}`>) => void
+> {
+    constructor(readonly init: AdapterInit<I, O, S>) {
         super();
+        this.listen();
+    }
+
+    private listen() {
         // handle messages
-        self.onmessage = async e => {
+        addEventListener("message", async e => {
+            // TODO if(e.origin !== this.init.provider) return this.error("Unauthorized");
+
             if (typeof e?.data?.__type !== "string") return;
+
             const type = e.data.__type;
+
             switch (type) {
                 case "state_push":
-                    this.onPushState?.(e.data.state);
+                    this.init.onPushState?.(e.data.state);
                     break;
                 case "event":
                     this.notifyListeners?.(e.data.event, e.data.args);
@@ -42,7 +72,7 @@ class Adapter<I extends Operations, O extends Operations, S = any> extends Event
 
                     if (!port) return this.err("Operation Channel Error", "Port not found");
 
-                    const op = await this.out?.[operation];
+                    const op = await this.init.out?.[operation];
                     if (typeof op !== "function") return this.err("Operation not found", null);
 
                     (port as MessagePort).onmessageerror = e => {
@@ -58,33 +88,31 @@ class Adapter<I extends Operations, O extends Operations, S = any> extends Event
 
                     break;
             }
-        };
-
-        // errors
-        self.onmessageerror = e => {
-            this.err("Message Error", e);
-        };
-        self.onerror = e => {
-            this.err("Uncaught Error", e);
-        };
+        });
     }
 
     // API
+
+    get meta(): Meta {
+        const m = (globalThis as any).meta;
+        if (!m || typeof m !== "object") throw new Error("Meta not defined");
+        return m;
+    }
 
     protected err(info: string, event: Event | unknown) {
         const msg =
             event instanceof Event ? ((event as any).message || (event as any).data || "").toString() : event instanceof Error ? event.message : "";
         const err = new Error(`${info}${msg ? ": " + msg : ""}`);
-        this?.onError?.(err);
+        this?.init?.onError?.(err);
         return err;
     }
 
     protected postMessage(type: string, data: object, transfer?: Transferable[]) {
-        postMessage({ __type: type, ...data }, "*", transfer);
+        postMessage({ ...data, __type: type, __token: this.meta.authToken }, "*", transfer);
     }
 
     async execute<T extends Operation<O>>(operation: T, ...args: OperationArgs<O, T>): Promise<OperationArgs<O, T>> {
-        return await receiveData(self, "operation", { args, operation }, [], this.operationTimeout);
+        return await receiveData(globalThis as any, "operation", { args, operation, __token: this.meta.authToken }, [], this.init.operationTimeout);
     }
 
     async emitEvent<T extends EventType<I>>(type: T, payload: OperationArgs<I, `event_${T}`>) {
@@ -95,7 +123,3 @@ class Adapter<I extends Operations, O extends Operations, S = any> extends Event
         this.postMessage("state_push", { state: newState, populate });
     }
 }
-
-const adapter = new Adapter();
-
-export default adapter;
