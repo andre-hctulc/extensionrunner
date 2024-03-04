@@ -1,0 +1,21 @@
+{
+    "name": "extensionrunner-test-module",
+    "private": true,
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "build": "webpack --mode production",
+        "builddev": "webpack --mode development"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "extensionrunner": ".."
+    },
+    "devDependencies": {
+        "html-bundler-webpack-plugin": "^3.5.5",
+        "webpack": "^5.90.3",
+        "webpack-cli": "^5.1.4"
+    }
+}
