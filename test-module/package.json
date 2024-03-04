@@ -1,5 +1,5 @@
 {
-    "name": "webex-test-module",
+    "name": "extensionrunner-test-module",
     "private": true,
     "version": "1.0.0",
     "description": "",
@@ -11,10 +11,9 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "extensionrunner": "^1.0.1"
+        "extensionrunner": ".."
     },
     "devDependencies": {
-        "@babel/preset-env": "^7.24.0",
         "html-bundler-webpack-plugin": "^3.5.5",
         "webpack": "^5.90.3",
         "webpack-cli": "^5.1.4"
