@@ -39,6 +39,7 @@ export interface PackageJSON {
 
 export class Extension extends Events<string, (payload: any, module: Module<any, any, any>) => void> {
     readonly url: string = "";
+    readonly staticParams: string = "";
     private _pkg: Partial<PackageJSON> = {};
     private started = false;
     /** `<module_id, { instances: <Module, data>, sharedState: any }>` */
@@ -49,6 +50,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         if (this.type === "github") {
             const [owner, repo] = this.init.name.split("/");
             this.url = `https://api.github.com/repos/${owner}/${repo}/contents/`;
+            this.staticParams = `?ref=${init.version}`;
         } else if (this.type === "npm") {
             this.url = `https://unpkg.com/${this.init.name}@${this.init.version}/`;
         } else throw new Error("Invalid type ('npm' or 'github' expected)");
@@ -72,30 +74,12 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         meta?: MetaExtension
     ): Promise<Module<I, O, S>> {
         path = relPath(path || "");
-        const id = `module:${path}`;
-
-        // start module worker
-
         /** The worker code is transformed to a string on build, so we can alwys import it here and start the worker */
         const workerCode = (worker as any).code;
+        alert(workerCode);
         const blob = new Blob([workerCode], { type: "application/javascript" });
-        const url = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob); // TODO revoke object url
         const worker_ = new Worker(url);
-        //URL.revokeObjectURL(url);
-        const defaultMeta: Meta = {
-            name: this.init.name,
-            path,
-            state: this.cache.get(id)?.sharedState,
-            version: this.init.version,
-            type: this.init.type,
-        };
-
-        // Post meta, so the worker knows which module to import
-
-        const optsMeta = meta ? meta(defaultMeta) : defaultMeta;
-
-        worker_.postMessage({ __type: "meta", meta: optsMeta });
-
         const mod: Module<any, any, any> = this.initModule(worker_, path, out, meta);
 
         return mod.start();
@@ -141,7 +125,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
 
         // extend meta
 
-        const defaultMeta: Meta = {
+        let _meta: Meta = {
             name: this.init.name,
             path,
             state: this.cache.get(id)?.sharedState,
@@ -149,12 +133,12 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
             type: this.init.type,
         };
 
-        let finalMeta = this.init.meta ? this.init.meta(defaultMeta) : defaultMeta;
-        if (meta) finalMeta = meta(finalMeta);
+        _meta = this.init.meta ? this.init.meta(_meta) : _meta;
+        if (meta) _meta = meta(_meta);
 
         // create module
 
-        const mod = new Module<I, O, S>(target, finalMeta, out, {
+        const mod = new Module<I, O, S>(target, _meta, out, {
             onPushState: (newState, populate) => {
                 if (populate) this.pushState(id, newState, undefined, [mod]);
                 this.init.onPushState?.(newState, mod);
@@ -191,7 +175,8 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
     }
 
     private getUrl(path: string, searchParams?: string) {
-        if (searchParams && !searchParams.startsWith("?")) searchParams = "?" + searchParams;
+        if (searchParams) searchParams = this.staticParams ? this.staticParams + "&" + searchParams : searchParams;
+        else searchParams = this.staticParams;
         return this.url + path + searchParams;
     }
 

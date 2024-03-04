@@ -19,37 +19,15 @@ export interface ModuleOptions<I extends Operations, O extends Operations, S = a
 
 /** Represents an iframe or a worker */
 export class Module<I extends Operations, O extends Operations, S = any> {
-    constructor(readonly target: Window | Worker, readonly meta: Meta, private out: O, protected options: ModuleOptions<I, O, S>) {
-        // this es called for extension workers internally after import
-        if (!(target instanceof Worker)) {
-            this.postMessage("ready", {});
-        }
-    }
-    private _state: S | undefined;
-
-    get state() {
-        return this._state;
-    }
-
-    protected err(info: string, event: Event | unknown) {
-        const msg =
-            event instanceof Event ? ((event as any).message || (event as any).data || "").toString() : event instanceof Error ? event.message : "";
-        const err = new Error(`${info}${msg ? ": " + msg : ""}`);
-        this.options?.onError?.(err);
-        return err;
-    }
-
-    protected postMessage(type: string, data: object, transfer?: Transferable[]) {
-        if (this.target instanceof Worker) this.target.postMessage({ __type: type, ...data }, { transfer });
-        else if (this.target) this.target.postMessage({ __type: type, ...data }, "*", transfer);
-    }
+    constructor(readonly target: Window | Worker, readonly meta: Meta, private out: O, protected options: ModuleOptions<I, O, S>) {}
 
     async start(): Promise<this> {
         return new Promise<this>((resolve, reject) => {
             let resolved = false;
-
             // handle messages
             this.target.onmessage = async e => {
+                console.log("MESG");
+
                 if (typeof e?.data?.__type !== "string") return;
                 const type = e.data.__type;
                 switch (type) {
@@ -104,10 +82,33 @@ export class Module<I extends Operations, O extends Operations, S = any> {
                 this.err("Uncaught Error", e);
             };
 
+            // Post meta, so the worker knows which module to import (for workers)
+            // iframes do not neccessarily need this
+            this.target.postMessage({ __type: "meta", meta: this.meta });
+
             setTimeout(() => {
                 if (!resolved) reject(this.err("Connection timeout", null));
-            }, this.options.connectionTimeout || 50000);
+            }, this.options.connectionTimeout || 5000);
         });
+    }
+
+    private _state: S | undefined;
+
+    get state() {
+        return this._state;
+    }
+
+    protected err(info: string, event: Event | unknown) {
+        const msg =
+            event instanceof Event ? ((event as any).message || (event as any).data || "").toString() : event instanceof Error ? event.message : "";
+        const err = new Error(`${info}${msg ? ": " + msg : ""}`);
+        this.options?.onError?.(err);
+        return err;
+    }
+
+    protected postMessage(type: string, data: object, transfer?: Transferable[]) {
+        if (this.target instanceof Worker) this.target.postMessage({ __type: type, ...data }, { transfer });
+        else if (this.target) this.target.postMessage({ __type: type, ...data }, "*", transfer);
     }
 
     async execute<T extends Operation<O>>(operation: T, ...args: OperationArgs<O, T>): Promise<OperationArgs<O, T>> {

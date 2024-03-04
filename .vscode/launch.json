@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "🦧 react-base demo",
+            "type": "chrome",
+            "webRoot": "${workspaceFolder}/test",
+            "request": "launch",
+            "url": "http://localhost:5500"
+        }
+    ]
+}
