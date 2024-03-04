@@ -43,12 +43,11 @@ class Adapter<I extends Operations, O extends Operations, S = any> extends Event
                     if (!port) return this.err("Operation Channel Error", "Port not found");
 
                     const op = await this.out?.[operation];
+                    if (typeof op !== "function") return this.err("Operation not found", null);
 
                     (port as MessagePort).onmessageerror = e => {
                         this.err("Operation Channel Error", e);
                     };
-
-                    if (typeof op !== "function") return this.err("Operation not found", null);
 
                     try {
                         const result = await op(...(args || []));
