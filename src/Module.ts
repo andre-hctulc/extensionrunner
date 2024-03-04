@@ -40,6 +40,9 @@ export class Module<I extends Operations, O extends Operations, S = any> {
                         break;
                     case "operation":
                         const { args, operation, __port: port } = e.data;
+
+                        if (!port) return this.err("Operation Channel Error", "Port not found");
+
                         const op = await this.out[operation];
 
                         (port as MessagePort).onmessageerror = e => {
