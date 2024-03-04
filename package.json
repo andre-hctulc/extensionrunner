@@ -7,8 +7,8 @@
         "tc": "echo worker && tsc --project worker.tsconfig.json --noEmit && echo browser && tsc --project browser.tsconfig.json --noEmit",
         "build": "echo worker && tsc --project worker.tsconfig.json && echo browser && tsc --project browser.tsconfig.json",
         "postbuild": "node scripts/workercode.js",
-        "update:patch": "git add . && git commit -m 'update $npm_package_version^' && git push && npm version patch",
-        "update:minor": "git add . && git commit -m 'update $npm_package_version^' && git push && npm version patch"
+        "update:patch": "npm run build && git add . && git commit -m 'update $npm_package_version^' && git push && npm version patch",
+        "update:minor": "npm run build && git add . && git commit -m 'update $npm_package_version^' && git push && npm version patch"
     },
     "author": "",
     "type": "module",
