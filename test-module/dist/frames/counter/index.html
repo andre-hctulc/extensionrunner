@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Test Extension (extensionrunner)</title>
+        <script>/*
+ * ATTENTION: The "eval" devtool has been used (maybe by default in mode: "development").
+ * This devtool is neither made for production nor for readable output files.
+ * It uses "eval()" calls to create a separate source file in the browser devtools.
+ * If you are trying to read the output file, select a different devtool (https://webpack.js.org/configuration/devtool/)
+ * or disable the default devtool with "devtool: false".
+ * If you are looking for production-ready output files, see mode: "production" (https://webpack.js.org/configuration/mode/).
+ */
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({
+
+/***/ "./src/frames/counter/index.js":
+/*!*************************************!*\
+  !*** ./src/frames/counter/index.js ***!
+  \*************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var extensionrunner_adapter__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! extensionrunner/adapter */ \"./node_modules/extensionrunner/Adapter.js\");\n\n\nextensionrunner_adapter__WEBPACK_IMPORTED_MODULE_0__[\"default\"].addEventListener(\"increment_counter\", newCounter => {\n    document.getElementById(\"counter\").innerText = newCounter;\n});\n\nconst triggerEchoBtn = document.getElementById(\"echo-btn\");\n\nif (triggerEchoBtn) {\n    triggerEchoBtn.onClick = () => {\n        echo();\n    };\n}\n\nfunction echo() {\n    const inp = document.getElementById(\"echo-input\");\n    extensionrunner_adapter__WEBPACK_IMPORTED_MODULE_0__[\"default\"].execute(\"echo\", inp && inp.value ? inp.value : \"<empty>\");\n}\n\n\n//# sourceURL=webpack://webex-test-module/./src/frames/counter/index.js?");
+
+/***/ }),
+
+/***/ "./node_modules/extensionrunner/Adapter.js":
+/*!*************************************************!*\
+  !*** ./node_modules/extensionrunner/Adapter.js ***!
+  \*************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => (__WEBPACK_DEFAULT_EXPORT__)\n/* harmony export */ });\n/* harmony import */ var _shared_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./shared.js */ \"./node_modules/extensionrunner/shared.js\");\n\nclass Adapter extends _shared_js__WEBPACK_IMPORTED_MODULE_0__.Events {\n    constructor() {\n        super();\n        this.out = {};\n        self.onmessage = async (e) => {\n            if (typeof e?.data?.__type !== \"string\")\n                return;\n            const type = e.data.__type;\n            switch (type) {\n                case \"state_push\":\n                    this.onPushState?.(e.data.state);\n                    break;\n                case \"event\":\n                    this.notifyListeners?.(e.data.event, e.data.args);\n                    break;\n                case \"operation\":\n                    const { args, operation, port } = e.data;\n                    const op = await this.out?.[operation];\n                    port.onmessageerror = e => {\n                        this.err(\"Operation Channel Error\", e);\n                    };\n                    if (typeof op !== \"function\")\n                        return this.err(\"Operation not found\", null);\n                    try {\n                        const result = await op(...args);\n                        port.postMessage({ __type: \"operation:result\", payload: result });\n                    }\n                    catch (err) {\n                        return this.err(\"Operation Execution Error\", err);\n                    }\n                    break;\n            }\n        };\n        self.onmessageerror = e => {\n            this.err(\"Message Error\", e);\n        };\n        self.onerror = e => {\n            this.err(\"Uncaught Error\", e);\n        };\n    }\n    err(info, event) {\n        const msg = event instanceof Event ? (event.message || event.data || \"\").toString() : event instanceof Error ? event.message : \"\";\n        const err = new Error(`${info}${msg ? \": \" + msg : \"\"}`);\n        this?.onError?.(err);\n        return err;\n    }\n    postMessage(type, data, transfer) {\n        postMessage({ __type: type, ...data }, \"*\", transfer);\n    }\n    async execute(operation, ...args) {\n        return await (0,_shared_js__WEBPACK_IMPORTED_MODULE_0__.receiveData)(self, \"operation\", { args, operation }, [], this.operationTimeout);\n    }\n    async emitEvent(type, payload) {\n        this.postMessage(\"event\", { event: type, args: payload });\n    }\n    async pushState(newState, populate = true) {\n        this.postMessage(\"state_push\", { state: newState, populate });\n    }\n}\nconst adapter = new Adapter();\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (adapter);\n\n\n//# sourceURL=webpack://webex-test-module/./node_modules/extensionrunner/Adapter.js?");
+
+/***/ }),
+
+/***/ "./node_modules/extensionrunner/shared.js":
+/*!************************************************!*\
+  !*** ./node_modules/extensionrunner/shared.js ***!
+  \************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   Events: () => (/* binding */ Events),\n/* harmony export */   getMessageData: () => (/* binding */ getMessageData),\n/* harmony export */   receiveData: () => (/* binding */ receiveData),\n/* harmony export */   relPath: () => (/* binding */ relPath)\n/* harmony export */ });\nvar __classPrivateFieldGet = (undefined && undefined.__classPrivateFieldGet) || function (receiver, state, kind, f) {\n    if (kind === \"a\" && !f) throw new TypeError(\"Private accessor was defined without a getter\");\n    if (typeof state === \"function\" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError(\"Cannot read private member from an object whose class did not declare it\");\n    return kind === \"m\" ? f : kind === \"a\" ? f.call(receiver) : f ? f.value : state.get(receiver);\n};\nvar _Events_listeners;\nfunction relPath(path) {\n    if (path.startsWith(\"./\"))\n        path = path.slice(2);\n    else if (path.startsWith(\"/\"))\n        path = path.slice(1);\n    return path;\n}\nfunction getMessageData(e, type) {\n    if (e.data && typeof e.data === \"object\" && e.data.__type === type)\n        return e.data;\n    return null;\n}\nasync function receiveData(target, messageType, data, transfer, errTimeout = 5000) {\n    return new Promise((resolve, reject) => {\n        const channel = new MessageChannel();\n        const out = channel.port1;\n        const in_ = channel.port2;\n        let resolved = false;\n        setTimeout(() => {\n            if (!resolved)\n                reject(new Error(\"Operation timeout\"));\n        }, errTimeout);\n        in_.onmessage = async (e) => {\n            const data = getMessageData(e, messageType + \":result\");\n            if (data) {\n                resolved = true;\n                resolve(data.payload);\n            }\n        };\n        in_.onmessageerror = e => {\n            reject(new Error(\"Channel Error (in)\"));\n        };\n        out.onmessageerror = e => {\n            reject(new Error(\"Channel Error (out)\"));\n        };\n        if (target instanceof Worker)\n            target.postMessage({ __type: messageType, ...data }, { transfer: [in_, ...transfer] });\n        else\n            target.postMessage({ __type: messageType, ...data }, \"*\", [in_, ...transfer]);\n    });\n}\nclass Events {\n    constructor() {\n        _Events_listeners.set(this, new Map());\n    }\n    addEventListener(type, listener) {\n        if (!__classPrivateFieldGet(this, _Events_listeners, \"f\").has(type))\n            __classPrivateFieldGet(this, _Events_listeners, \"f\").set(type, new Set());\n        __classPrivateFieldGet(this, _Events_listeners, \"f\").get(type)?.add(listener);\n    }\n    removeEventListener(type, listener) {\n        __classPrivateFieldGet(this, _Events_listeners, \"f\").get(type)?.delete(listener);\n    }\n    notifyListeners(type, ...args) {\n        __classPrivateFieldGet(this, _Events_listeners, \"f\").get(type)?.forEach(listener => listener(...args));\n    }\n}\n_Events_listeners = new WeakMap();\n\n\n//# sourceURL=webpack://webex-test-module/./node_modules/extensionrunner/shared.js?");
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module can't be inlined because the eval devtool is used.
+/******/ 	var __webpack_exports__ = __webpack_require__("./src/frames/counter/index.js");
+/******/ 	
+/******/ })()
+;</script>
+    </head>
+    <body>
+        <h1>Test Extension (extensionrunner)</h1>
+        <span id="counter" />
+        <span id="echo" />
+        <input id="echo-input" />
+        <button id="echo-btn" />
+    </body>
+</html>
