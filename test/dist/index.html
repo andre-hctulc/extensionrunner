@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Test web-extension</title>
+        <script>/*
+ * ATTENTION: The "eval" devtool has been used (maybe by default in mode: "development").
+ * This devtool is neither made for production nor for readable output files.
+ * It uses "eval()" calls to create a separate source file in the browser devtools.
+ * If you are trying to read the output file, select a different devtool (https://webpack.js.org/configuration/devtool/)
+ * or disable the default devtool with "devtool: false".
+ * If you are looking for production-ready output files, see mode: "production" (https://webpack.js.org/configuration/mode/).
+ */
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	var __webpack_modules__ = ({
+
+/***/ "./test/index.js":
+/*!***********************!*\
+  !*** ./test/index.js ***!
+  \***********************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var extensionrunner__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! extensionrunner */ \"./test/node_modules/extensionrunner/index.js\");\n/* module decorator */ module = __webpack_require__.hmd(module);\n\n\nasync function main() {\n    const prov = new extensionrunner__WEBPACK_IMPORTED_MODULE_0__.Provider({});\n    const sha = \"51438071198aab2643772a2bc1b169dcdb2ec005\";\n    const extension = await prov.loadExtension({\n        type: \"github\",\n        name: \"andre-hctulc/extensionrunner-test-extension\",\n        version: sha,\n        out: {\n            echo: text => alert(text + \" ... \" + text + \" .. . .    .\" + text),\n        },\n        onStatePush: (newState, module) => {\n            alert(\"State Push received:\", newState);\n        },\n    });\n\n    const info = document.getElementById(\"info\");\n    info.innerHTML = `Test-Extension loaded: ${extension.pkg.name}@${extension.pkg.version} SHA ${sha}`;\n\n    try {\n        const module = await extension.launchModule(\"dist/math.js\");\n        console.log(\"Module loaded:\", extension);\n    } catch (e) {\n        console.error(e);\n    }\n\n    const eventBtn = document.getElementById(\"event\");\n    const operationBtn = document.getElementById(\"operation\");\n    const stateBtn = document.getElementById(\"state\");\n\n    eventBtn.onclick = () => {\n        extension.emitEvent(\"greet\", \"Hello world!\");\n    };\n\n    operationBtn.onclick = async () => {\n        const sum = await module.execute(\"add\", 1, 5);\n        const d = extension.execute(\"substract\", 10, 2);\n        alert(\"Sum: \" + sum + \" Sub: \" + d);\n    };\n\n    // pushState\n\n    let counter = 0;\n\n    stateBtn.onclick = () => {\n        extension.pushState({ message: \"Counter: \" + ++counter });\n    };\n}\n\nmain();\n//main2();\n\nfunction main2() {\n    const worker = new Worker(\"worker.js\");\n    worker.postMessage({\n        __type: \"meta\",\n        meta: {\n            type: \"github\",\n            name: \"andre-hctulc/extensionrunner-test-extension\",\n            version: \"09edc7ea69cdb025a97b5cd25f27535d9c40bede\",\n            path: \"dist/math.js\",\n        },\n    });\n    worker.onmessage = e => {\n        if (e.data?.__type === \"ready\") {\n            alert(\"Worker is ready\");\n            console.log(\"Worker is ready\");\n        }\n    };\n    worker.onerror = e => {\n        console.error(e);\n    };\n}\n\n\n//# sourceURL=webpack://extensionrunner/./test/index.js?");
+
+/***/ }),
+
+/***/ "./test/node_modules/extensionrunner/Extension.js":
+/*!********************************************************!*\
+  !*** ./test/node_modules/extensionrunner/Extension.js ***!
+  \********************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   Extension: () => (/* binding */ Extension)\n/* harmony export */ });\n/* harmony import */ var _Module_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Module.js */ \"./test/node_modules/extensionrunner/Module.js\");\n/* harmony import */ var _shared_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shared.js */ \"./test/node_modules/extensionrunner/shared.js\");\n/* harmony import */ var _worker_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./worker.js */ \"./test/node_modules/extensionrunner/worker.js\");\n\n\n\nclass Extension extends _shared_js__WEBPACK_IMPORTED_MODULE_1__.Events {\n    constructor(init) {\n        super();\n        this.init = init;\n        this.url = \"\";\n        this.staticParams = \"\";\n        this._pkg = {};\n        this.started = false;\n        /** `<module_id, { instances: <Module, data>, sharedState: any }>` */\n        this.cache = new Map();\n        if (this.type === \"github\") {\n            const [owner, repo] = this.init.name.split(\"/\");\n            this.url = `https://api.github.com/repos/${owner}/${repo}/contents/`;\n            this.staticParams = `?ref=${init.version}`;\n        }\n        else if (this.type === \"npm\") {\n            this.url = `https://unpkg.com/${this.init.name}@${this.init.version}/`;\n        }\n        else\n            throw new Error(\"Invalid type ('npm' or 'github' expected)\");\n    }\n    async start() {\n        if (this.started)\n            return;\n        this.started = true;\n        // load meta (package.json)\n        const file = await this.loadFile(\"package.json\");\n        const text = await file.text();\n        this._pkg = JSON.parse(text);\n    }\n    /**\n     * @param path Use _null_ or empty string for the packages entry file\n     */\n    async launchModule(path, out, meta) {\n        path = (0,_shared_js__WEBPACK_IMPORTED_MODULE_1__.relPath)(path || \"\");\n        /** The worker code is transformed to a string on build, so we can alwys import it here and start the worker */\n        const workerCode = _worker_js__WEBPACK_IMPORTED_MODULE_2__.code;\n        alert(workerCode);\n        const blob = new Blob([workerCode], { type: \"application/javascript\" });\n        const url = URL.createObjectURL(blob); // TODO revoke object url\n        const worker_ = new Worker(url);\n        const mod = this.initModule(worker_, path, out, meta);\n        return mod.start();\n    }\n    async launchIFrame(parentElement, path, out, meta) {\n        path = (0,_shared_js__WEBPACK_IMPORTED_MODULE_1__.relPath)(path);\n        // create iframe and append to parentElement\n        const iframe = document.createElement(\"iframe\");\n        iframe.src = this.url + path;\n        // wait for load\n        return new Promise((resolve, reject) => {\n            iframe.onload = async (e) => {\n                if (!iframe.contentWindow)\n                    return reject(\"`contentWindow`ndow not defined\");\n                const mod = this.initModule(iframe.contentWindow, path, out, meta);\n                resolve(mod.start());\n            };\n            iframe.addEventListener(\"error\", e => {\n                reject(new Error(e.message));\n            });\n            parentElement.appendChild(iframe);\n        });\n    }\n    initModule(target, path, out, meta) {\n        const id = `iframe:${path}`;\n        // extend meta\n        let _meta = {\n            name: this.init.name,\n            path,\n            state: this.cache.get(id)?.sharedState,\n            version: this.init.version,\n            type: this.init.type,\n        };\n        _meta = this.init.meta ? this.init.meta(_meta) : _meta;\n        if (meta)\n            _meta = meta(_meta);\n        // create module\n        const mod = new _Module_js__WEBPACK_IMPORTED_MODULE_0__.Module(target, _meta, out, {\n            onPushState: (newState, populate) => {\n                if (populate)\n                    this.pushState(id, newState, undefined, [mod]);\n                this.init.onPushState?.(newState, mod);\n            },\n            onEvent: (type, payload) => {\n                this.notifyListeners?.(type, payload, mod);\n            },\n            operationTimeout: this.init.operationTimeout,\n            connectionTimeout: this.init.connectionTimeout,\n        });\n        // cache\n        let instances = this.cache.get(id)?.instances;\n        if (!instances) {\n            instances = new Map();\n            this.cache.set(id, { instances, sharedState: undefined });\n        }\n        instances.set(mod, { state: undefined });\n        return mod;\n    }\n    get id() {\n        return this.init.type + \"%\" + this.init.name;\n    }\n    get pkg() {\n        return this._pkg;\n    }\n    get type() {\n        return this.init.type;\n    }\n    getUrl(path, searchParams) {\n        if (searchParams)\n            searchParams = this.staticParams ? this.staticParams + \"&\" + searchParams : searchParams;\n        else\n            searchParams = this.staticParams;\n        return this.url + path + searchParams;\n    }\n    /** If the response is not ok, the `Response` will be set on the thrown error (`Error.response`) */\n    async loadFile(path) {\n        if (path.startsWith(\"/\"))\n            path = path.slice(1);\n        else if (path.startsWith(\"./\"))\n            path = path.slice(2);\n        const response = await fetch(this.getUrl(path), this.type === \"github\" ? { headers: { Accept: \"application/vnd.github.raw+json\" } } : {});\n        if (!response.ok) {\n            const error = new Error(`Failed to load file: ${response.statusText}`);\n            error.response = response;\n            throw new Error(`Failed to load file: ${response.statusText}`);\n        }\n        return response;\n    }\n    pushState(moduleId, newState, instance, exclude) {\n        const exclSet = new Set(exclude);\n        const cache = this.cache.get(moduleId);\n        if (cache) {\n            if (instance) {\n                if (!exclSet.has(instance))\n                    instance.pushState(newState);\n            }\n            else {\n                const modules = Array.from(cache.instances.keys());\n                modules.forEach(instance => {\n                    if (!exclSet.has(instance))\n                        instance.pushState(newState);\n                });\n            }\n        }\n    }\n    emitEvent(type, payload, filter) {\n        for (const moduleId of this.cache.keys()) {\n            const modules = Array.from(this.cache.get(moduleId)?.instances.keys() || []);\n            modules.forEach(instance => {\n                if (filter && !filter(moduleId, instance))\n                    return;\n                instance.emitEvent(type, payload);\n            });\n        }\n    }\n}\n\n\n//# sourceURL=webpack://extensionrunner/./test/node_modules/extensionrunner/Extension.js?");
+
+/***/ }),
+
+/***/ "./test/node_modules/extensionrunner/Module.js":
+/*!*****************************************************!*\
+  !*** ./test/node_modules/extensionrunner/Module.js ***!
+  \*****************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   Module: () => (/* binding */ Module)\n/* harmony export */ });\n/* harmony import */ var _shared_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./shared.js */ \"./test/node_modules/extensionrunner/shared.js\");\n\n/** Represents an iframe or a worker */\nclass Module {\n    constructor(target, meta, out, options) {\n        this.target = target;\n        this.meta = meta;\n        this.out = out;\n        this.options = options;\n    }\n    async start() {\n        return new Promise((resolve, reject) => {\n            let resolved = false;\n            // handle messages\n            this.target.onmessage = async (e) => {\n                console.log(\"MESG\");\n                if (typeof e?.data?.__type !== \"string\")\n                    return;\n                const type = e.data.__type;\n                switch (type) {\n                    case \"state_push\":\n                        this._state = e.data.state;\n                        this.options.onPushState?.(e.data.state, !!e.data.populate);\n                        break;\n                    case \"event\":\n                        this.options.onEvent?.(e.data.event, e.data.args);\n                        break;\n                    case \"operation\":\n                        const { args, operation, port } = e.data;\n                        const op = await this.out[operation];\n                        port.onmessageerror = e => {\n                            this.err(\"Operation Channel Error\", e);\n                        };\n                        if (typeof op !== \"function\")\n                            return this.err(\"Operation not found\", null);\n                        try {\n                            const result = await op(...args);\n                            port.postMessage({ __type: \"operation:result\", payload: result });\n                        }\n                        catch (err) {\n                            return this.err(\"Operation Execution Error\", err);\n                        }\n                        break;\n                    case \"ready\":\n                        resolved = true;\n                        // init postMessage (received by worker.ts or iframe)\n                        const events = new MessageChannel();\n                        const eventsIn = events.port1;\n                        const eventsOut = events.port2;\n                        eventsIn.onmessageerror = e => {\n                            this.err(\"Events Channel (in) Error\", e);\n                        };\n                        eventsOut.onmessageerror = e => {\n                            this.err(\"Events Channel (out) Error\", e);\n                        };\n                        resolve(this);\n                        break;\n                }\n            };\n            // errors\n            this.target.onmessageerror = (e) => {\n                this.err(\"Message Error\", e);\n            };\n            this.target.onerror = (e) => {\n                this.err(\"Uncaught Error\", e);\n            };\n            // Post meta, so the worker knows which module to import (for workers)\n            // iframes do not neccessarily need this\n            this.target.postMessage({ __type: \"meta\", meta: this.meta });\n            setTimeout(() => {\n                if (!resolved)\n                    reject(this.err(\"Connection timeout\", null));\n            }, this.options.connectionTimeout || 5000);\n        });\n    }\n    get state() {\n        return this._state;\n    }\n    err(info, event) {\n        const msg = event instanceof Event ? (event.message || event.data || \"\").toString() : event instanceof Error ? event.message : \"\";\n        const err = new Error(`${info}${msg ? \": \" + msg : \"\"}`);\n        this.options?.onError?.(err);\n        return err;\n    }\n    postMessage(type, data, transfer) {\n        if (this.target instanceof Worker)\n            this.target.postMessage({ __type: type, ...data }, { transfer });\n        else if (this.target)\n            this.target.postMessage({ __type: type, ...data }, \"*\", transfer);\n    }\n    async execute(operation, ...args) {\n        return await (0,_shared_js__WEBPACK_IMPORTED_MODULE_0__.receiveData)(this.target, \"operation\", { args, operation }, [], this.options.operationTimeout);\n    }\n    async emitEvent(type, payload) {\n        this.postMessage(\"event\", { event: type, args: payload });\n    }\n    async pushState(newState) {\n        this.postMessage(\"state_push\", { state: newState });\n    }\n}\n\n\n//# sourceURL=webpack://extensionrunner/./test/node_modules/extensionrunner/Module.js?");
+
+/***/ }),
+
+/***/ "./test/node_modules/extensionrunner/Provider.js":
+/*!*******************************************************!*\
+  !*** ./test/node_modules/extensionrunner/Provider.js ***!
+  \*******************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   Provider: () => (/* binding */ Provider)\n/* harmony export */ });\n/* harmony import */ var _Extension_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Extension.js */ \"./test/node_modules/extensionrunner/Extension.js\");\n\nclass Provider {\n    constructor(options) {\n        this.options = options;\n        this.cache = new Map();\n    }\n    async loadExtension(extensionInit) {\n        const extension = new _Extension_js__WEBPACK_IMPORTED_MODULE_0__.Extension(extensionInit);\n        try {\n            await extension.start();\n        }\n        catch (err) {\n            throw new Error(`Failed to load extension: ${err}`);\n        }\n        this.cache.set(extension.id, extension);\n        return extension;\n    }\n    allExtensions() {\n        return Array.from(this.cache.values());\n    }\n    getExtension(id) {\n        return this.cache.get(id) || null;\n    }\n}\n\n\n//# sourceURL=webpack://extensionrunner/./test/node_modules/extensionrunner/Provider.js?");
+
+/***/ }),
+
+/***/ "./test/node_modules/extensionrunner/index.js":
+/*!****************************************************!*\
+  !*** ./test/node_modules/extensionrunner/index.js ***!
+  \****************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   Extension: () => (/* reexport safe */ _Extension_js__WEBPACK_IMPORTED_MODULE_0__.Extension),\n/* harmony export */   \"default\": () => (__WEBPACK_DEFAULT_EXPORT__)\n/* harmony export */ });\n/* harmony import */ var _Extension_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Extension.js */ \"./test/node_modules/extensionrunner/Extension.js\");\n/* harmony import */ var _Provider_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Provider.js */ \"./test/node_modules/extensionrunner/Provider.js\");\n\n\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_Provider_js__WEBPACK_IMPORTED_MODULE_1__.Provider);\n\n\n//# sourceURL=webpack://extensionrunner/./test/node_modules/extensionrunner/index.js?");
+
+/***/ }),
+
+/***/ "./test/node_modules/extensionrunner/shared.js":
+/*!*****************************************************!*\
+  !*** ./test/node_modules/extensionrunner/shared.js ***!
+  \*****************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   Events: () => (/* binding */ Events),\n/* harmony export */   getMessageData: () => (/* binding */ getMessageData),\n/* harmony export */   receiveData: () => (/* binding */ receiveData),\n/* harmony export */   relPath: () => (/* binding */ relPath)\n/* harmony export */ });\nvar __classPrivateFieldGet = (undefined && undefined.__classPrivateFieldGet) || function (receiver, state, kind, f) {\n    if (kind === \"a\" && !f) throw new TypeError(\"Private accessor was defined without a getter\");\n    if (typeof state === \"function\" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError(\"Cannot read private member from an object whose class did not declare it\");\n    return kind === \"m\" ? f : kind === \"a\" ? f.call(receiver) : f ? f.value : state.get(receiver);\n};\nvar _Events_listeners;\nfunction relPath(path) {\n    if (path.startsWith(\"./\"))\n        path = path.slice(2);\n    else if (path.startsWith(\"/\"))\n        path = path.slice(1);\n    return path;\n}\nfunction getMessageData(e, type) {\n    if (e.data && typeof e.data === \"object\" && e.data.__type === type)\n        return e.data;\n    return null;\n}\nasync function receiveData(target, messageType, data, transfer, errTimeout = 5000) {\n    return new Promise((resolve, reject) => {\n        const channel = new MessageChannel();\n        const out = channel.port1;\n        const in_ = channel.port2;\n        let resolved = false;\n        setTimeout(() => {\n            if (!resolved)\n                reject(new Error(\"Operation timeout\"));\n        }, errTimeout || 5000);\n        in_.onmessage = async (e) => {\n            const data = getMessageData(e, messageType + \":result\");\n            if (data) {\n                resolved = true;\n                resolve(data.payload);\n            }\n        };\n        in_.onmessageerror = e => {\n            reject(new Error(\"Channel Error (in)\"));\n        };\n        out.onmessageerror = e => {\n            reject(new Error(\"Channel Error (out)\"));\n        };\n        if (target instanceof Worker)\n            target.postMessage({ __type: messageType, ...data }, { transfer: [in_, ...transfer] });\n        else\n            target.postMessage({ __type: messageType, ...data }, \"*\", [in_, ...transfer]);\n    });\n}\nclass Events {\n    constructor() {\n        _Events_listeners.set(this, new Map());\n    }\n    addEventListener(type, listener) {\n        if (!__classPrivateFieldGet(this, _Events_listeners, \"f\").has(type))\n            __classPrivateFieldGet(this, _Events_listeners, \"f\").set(type, new Set());\n        __classPrivateFieldGet(this, _Events_listeners, \"f\").get(type)?.add(listener);\n    }\n    removeEventListener(type, listener) {\n        __classPrivateFieldGet(this, _Events_listeners, \"f\").get(type)?.delete(listener);\n    }\n    notifyListeners(type, ...args) {\n        __classPrivateFieldGet(this, _Events_listeners, \"f\").get(type)?.forEach(listener => listener(...args));\n    }\n}\n_Events_listeners = new WeakMap();\n\n\n//# sourceURL=webpack://extensionrunner/./test/node_modules/extensionrunner/shared.js?");
+
+/***/ }),
+
+/***/ "./test/node_modules/extensionrunner/worker.js":
+/*!*****************************************************!*\
+  !*** ./test/node_modules/extensionrunner/worker.js ***!
+  \*****************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   code: () => (/* binding */ code)\n/* harmony export */ });\nconst code=`\n/*\nImport the extension module from github or unpkg\n*/\nlet started = false;\nconst isNonEmptyStr = (s) => !!s && typeof s === \"string\";\nself.onmessage = async (e) => {\n    if (started)\n        return;\n    started = true;\n    // If init message\n    if (e.data?.__type == \"meta\" && typeof e.data.meta === \"object\") {\n        const meta = e.data.meta;\n        // Check meta\n        if (!isNonEmptyStr(meta.path))\n            throw new Error(\"Invalid path\");\n        if (!isNonEmptyStr(meta.version))\n            throw new Error(\"Invalid name\");\n        if (!isNonEmptyStr(meta.path))\n            throw new Error(\"Invalid version\");\n        // set meta globally\n        self.__meta = meta;\n        // import module (for side effects - imported modules should use \\`Adapter\\`)\n        let importUrl;\n        // do not use template strings here, post build script wraps this code in \\`\\`\n        if (meta.type === \"npm\") {\n            importUrl = \"https://unpkg.com/\" + meta.name + \"@\" + meta.version + \"/\" + meta.path;\n        }\n        else if (meta.type === \"github\") {\n            const [owner, repo] = meta.name.split(\"/\");\n            importUrl = \"github:\" + owner + \"/\" + repo + \"@\" + meta.version;\n        }\n        else\n            throw new Error(\"Invalid type ('npm' or 'github' expected)\");\n        const mod = await import(importUrl);\n        postMessage({ __type: \"ready\" });\n    }\n};\nexport {};\n\n`\n\n//# sourceURL=webpack://extensionrunner/./test/node_modules/extensionrunner/worker.js?");
+
+/***/ })
+
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			id: moduleId,
+/******/ 			loaded: false,
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Flag the module as loaded
+/******/ 		module.loaded = true;
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/harmony module decorator */
+/******/ 	(() => {
+/******/ 		__webpack_require__.hmd = (module) => {
+/******/ 			module = Object.create(module);
+/******/ 			if (!module.children) module.children = [];
+/******/ 			Object.defineProperty(module, 'exports', {
+/******/ 				enumerable: true,
+/******/ 				set: () => {
+/******/ 					throw new Error('ES Modules may not assign module.exports or exports.*, Use ESM export syntax, instead: ' + module.id);
+/******/ 				}
+/******/ 			});
+/******/ 			return module;
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	var __webpack_exports__ = __webpack_require__("./test/index.js");
+/******/ 	
+/******/ })()
+;</script>
+    </head>
+    <body>
+        <h1>Test</h1>
+        <span>Test-Extension:</span>
+        <p id="info"></p>
+        <button id="operation">Operation (add and substract)</button>
+        <button id="state">Push state</button>
+        <button id="event">Emit Event (shape_change)</button>
+    </body>
+</html>

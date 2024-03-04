@@ -2,6 +2,6 @@ test
 test-module
 src
 *.tsconfig.json
-webpack.config.js
+webpack.config.mjs
 scripts
 .vscode
