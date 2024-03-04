@@ -39,7 +39,6 @@ export interface PackageJSON {
 
 export class Extension extends Events<string, (payload: any, module: Module<any, any, any>) => void> {
     readonly url: string = "";
-    readonly staticParams: string = "";
     private _pkg: Partial<PackageJSON> = {};
     private started = false;
     /** `<module_id, { instances: <Module, data>, sharedState: any }>` */
@@ -49,8 +48,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         super();
         if (this.type === "github") {
             const [owner, repo] = this.init.name.split("/");
-            this.url = `https://api.github.com/repos/${owner}/${repo}/contents/`;
-            this.staticParams = `?ref=${init.version}`;
+            this.url = `https://cdn.jsdelivr.net/gh/${owner}/${repo}@${init.version}/`;
         } else if (this.type === "npm") {
             this.url = `https://unpkg.com/${this.init.name}@${this.init.version}/`;
         } else throw new Error("Invalid type ('npm' or 'github' expected)");
@@ -97,6 +95,8 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         const iframe = document.createElement("iframe");
 
         iframe.src = this.url + path;
+        iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
+        // TODOD more attrs?
 
         // wait for load
         return new Promise<Module<I, O, S>>((resolve, reject) => {
@@ -174,16 +174,15 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
     }
 
     private getUrl(path: string, searchParams?: string) {
-        if (searchParams) searchParams = this.staticParams ? this.staticParams + "&" + searchParams : searchParams;
-        else searchParams = this.staticParams;
-        return this.url + path + searchParams;
+        if (searchParams && !searchParams.startsWith("?")) searchParams = "?" + searchParams;
+        return this.url + path + (searchParams || "");
     }
 
     /** If the response is not ok, the `Response` will be set on the thrown error (`Error.response`) */
     async loadFile(path: string) {
         if (path.startsWith("/")) path = path.slice(1);
         else if (path.startsWith("./")) path = path.slice(2);
-        const response = await fetch(this.getUrl(path), this.type === "github" ? { headers: { Accept: "application/vnd.github.raw+json" } } : {});
+        const response = await fetch(this.getUrl(path), this.type === "github" ? {} : {});
         if (!response.ok) {
             const error = new Error(`Failed to load file: ${response.statusText}`);
             (error as any).response = response;
