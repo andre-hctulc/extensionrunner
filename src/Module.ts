@@ -44,10 +44,10 @@ export class Module<I extends Operations, O extends Operations, S = any> {
 
             // handle messages
             // on global object as cross origin iframes do not allow to listen to messages on the iframe.contentWindow object
-            (window as Window).onmessage = async e => {
+            (window as Window).addEventListener("message", async e => {
                 // authenticate
-                if (e.origin !== this.origin) return false;
-                if (e.data?.__token !== this.meta.authToken) return false;
+                // TODO if (e.origin !== this.origin) return;
+                // TODO if (e.data?.__token !== this.meta.authToken) return;
 
                 if (typeof e?.data?.__type !== "string") return;
 
@@ -72,6 +72,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
                         (port as MessagePort).onmessageerror = e => {
                             this.err("Operation Channel Error", e);
                         };
+                        
                         try {
                             const result = await op(...args);
                             (port as MessagePort).postMessage({ __type: "operation:result", payload: result });
@@ -104,7 +105,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
 
                         break;
                 }
-            };
+            });
 
             // Post meta:
             // - Workers need this to import the module in the worker initialization, whoich dynamicaally imports the module
