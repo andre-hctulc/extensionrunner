@@ -6,7 +6,8 @@
         "clear": "rm -rf *.{js,d.ts}",
         "tc": "echo worker && tsc --project worker.tsconfig.json --noEmit && echo browser && tsc --project browser.tsconfig.json --noEmit",
         "build": "echo worker && tsc --project worker.tsconfig.json && echo browser && tsc --project browser.tsconfig.json",
-        "postbuild": "node scripts/workercode.js"
+        "postbuild": "node scripts/workercode.js",
+        "test:build": "webpack --mode develepment"
     },
     "author": "",
     "type": "module",
@@ -14,6 +15,12 @@
     "main": "index.js",
     "exports": {
         "./adapter": "./Adapter.js",
+        "./adapter.js": "./Adapter.js",
         ".": "./index.js"
+    },
+    "devDependencies": {
+        "html-bundler-webpack-plugin": "^3.5.5",
+        "webpack": "^5.90.3",
+        "webpack-cli": "^5.1.4"
     }
 }

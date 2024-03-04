@@ -106,7 +106,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
 
             setTimeout(() => {
                 if (!resolved) reject(this.err("Connection timeout", null));
-            }, this.options.connectionTimeout);
+            }, this.options.connectionTimeout || 50000);
         });
     }
 

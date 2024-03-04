@@ -1,5 +1,7 @@
-node_modules
+**/node_modules
 *.js
 *.d.ts
 Todo.md
 **/.DS_Store
+# eigenes repo
+test-extension

@@ -27,13 +27,16 @@ self.onmessage = async e => {
         // import module (for side effects - imported modules should use `Adapter`)
         let importUrl: string;
 
+        // do not use template strings here, post build script wraps this code in ``
         if (meta.type === "npm") {
-            importUrl = `https://unpkg.com/${meta.name}@${meta.version}/${meta.path}`;
+            importUrl = "https://unpkg.com/" + meta.name + "@" + meta.version + "/" + meta.path;
         } else if (meta.type === "github") {
             const [owner, repo] = meta.name.split("/");
-            importUrl = `github:${owner}/${repo}@${meta.version}`;
+            importUrl = "github:" + owner + "/" + repo + "@" + meta.version;
         } else throw new Error("Invalid type ('npm' or 'github' expected)");
 
         const mod = await import(importUrl);
+        
+        postMessage({ __type: "ready" });
     }
 };

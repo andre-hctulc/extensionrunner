@@ -18,7 +18,7 @@ export async function receiveData(target: Worker | Window, messageType: string, 
 
         setTimeout(() => {
             if (!resolved) reject(new Error("Operation timeout"));
-        }, errTimeout);
+        }, errTimeout || 5000);
 
         in_.onmessage = async e => {
             const data = getMessageData(e, messageType + ":result");

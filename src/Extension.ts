@@ -7,7 +7,7 @@ export type ExtensionInit = {
     type: "github" | "npm";
     /** npm package name or git repo (:username/:repo)*/
     name: string;
-    /** npm version or git commit sha */
+    /** npm version */
     version: string;
     onError?: (err: Error) => void;
     onPushState?: (newState: any, source: Module<any, any, any>) => void;
@@ -39,7 +39,6 @@ export interface PackageJSON {
 
 export class Extension extends Events<string, (payload: any, module: Module<any, any, any>) => void> {
     readonly url: string = "";
-    readonly staticParams: string = "";
     private _pkg: Partial<PackageJSON> = {};
     private started = false;
     /** `<module_id, { instances: <Module, data>, sharedState: any }>` */
@@ -50,7 +49,6 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         if (this.type === "github") {
             const [owner, repo] = this.init.name.split("/");
             this.url = `https://api.github.com/repos/${owner}/${repo}/contents/`;
-            this.staticParams = `?ref=${init.version}`;
         } else if (this.type === "npm") {
             this.url = `https://unpkg.com/${this.init.name}@${this.init.version}/`;
         } else throw new Error("Invalid type ('npm' or 'github' expected)");
@@ -83,7 +81,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         const blob = new Blob([workerCode], { type: "application/javascript" });
         const url = URL.createObjectURL(blob);
         const worker_ = new Worker(url);
-        URL.revokeObjectURL(url);
+        //URL.revokeObjectURL(url);
         const defaultMeta: Meta = {
             name: this.init.name,
             path,
@@ -95,6 +93,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         // Post meta, so the worker knows which module to import
 
         const optsMeta = meta ? meta(defaultMeta) : defaultMeta;
+
         worker_.postMessage({ __type: "meta", meta: optsMeta });
 
         const mod: Module<any, any, any> = this.initModule(worker_, path, out, meta);
@@ -192,15 +191,20 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
     }
 
     private getUrl(path: string, searchParams?: string) {
-        if (searchParams) searchParams = this.staticParams + "&" + searchParams;
-        else searchParams = this.staticParams;
+        if (searchParams && !searchParams.startsWith("?")) searchParams = "?" + searchParams;
         return this.url + path + searchParams;
     }
 
+    /** If the response is not ok, the `Response` will be set on the thrown error (`Error.response`) */
     async loadFile(path: string) {
         if (path.startsWith("/")) path = path.slice(1);
         else if (path.startsWith("./")) path = path.slice(2);
         const response = await fetch(this.getUrl(path), this.type === "github" ? { headers: { Accept: "application/vnd.github.raw+json" } } : {});
+        if (!response.ok) {
+            const error = new Error(`Failed to load file: ${response.statusText}`);
+            (error as any).response = response;
+            throw new Error(`Failed to load file: ${response.statusText}`);
+        }
         return response;
     }
 
