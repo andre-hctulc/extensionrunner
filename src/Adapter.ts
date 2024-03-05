@@ -6,6 +6,7 @@ Runs in Worker/IFrame
 */
 
 const isBrowser = typeof window !== "undefined" && window === window.self;
+const postToParent = isBrowser ? window.parent.postMessage : postMessage;
 
 // Listen to meta init
 
@@ -21,9 +22,9 @@ const metaListener: (e: MessageEvent) => void = (e: MessageEvent) => {
         // TODO remove this line
         console.log("Meta received", d.meta);
         (globalThis as any).meta = d.meta;
-        removeEventListener("message", metaListener);
         // notify ready (Use parent.postmessage)
-        parent?.postMessage({ __type: "ready", __token: d.meta.authToken });
+        postToParent({ __type: "ready", __token: d.meta.authToken }, { targetOrigin: "*" });
+        removeEventListener("message", metaListener);
     }
 };
 
@@ -113,7 +114,6 @@ export default class Adapter<I extends Operations, O extends Operations, S = any
     }
 
     protected postMessage(type: string, data: object, transfer?: Transferable[]) {
-        const postToParent = isBrowser ? window.parent.postMessage : postMessage;
         postToParent({ ...data, __type: type, __token: this.meta.authToken }, "*", transfer);
     }
 
