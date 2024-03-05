@@ -5,22 +5,25 @@ import { EventType, Meta, Operation, OperationArgs, Operations } from "./types.j
 Runs in Worker/IFrame
 */
 
+const isBrowser = typeof window !== "undefined" && window === window.self;
+
 // Listen to meta init
 
 // - For iframes meta initialization
 // - For Modules the meta gets posted to the worker initialization which dynamically imports the module (and this file)
 //   which means the meta should already be defined
 const metaListener: (e: MessageEvent) => void = (e: MessageEvent) => {
-    //TODO if ((globalThis as any).meta && typeof (globalThis as any).meta === "object") return removeEventListener("message", metaListener);
+    if ((globalThis as any).meta && typeof (globalThis as any).meta === "object") return removeEventListener("message", metaListener);
 
     const d = getMessageData(e, "meta");
 
     if (d) {
+        // TODO remove this line
         console.log("Meta received", d.meta);
         (globalThis as any).meta = d.meta;
         removeEventListener("message", metaListener);
-        // notify ready
-        postMessage({ __type: "ready", __token: d.meta.authToken });
+        // notify ready (Use parent.postmessage)
+        parent?.postMessage({ __type: "ready", __token: d.meta.authToken });
     }
 };
 
@@ -42,7 +45,7 @@ export type AdapterInit<I extends Operations, O extends Operations, S = any> = {
     allowOrigins?: string[];
 };
 
-/** Represents an iframe or a worker */
+/** Extension adapter */
 export default class Adapter<I extends Operations, O extends Operations, S = any> extends Events<
     EventType<I>,
     (payload: OperationArgs<I, `event_${EventType<I>}`>) => void
@@ -110,11 +113,18 @@ export default class Adapter<I extends Operations, O extends Operations, S = any
     }
 
     protected postMessage(type: string, data: object, transfer?: Transferable[]) {
-        postMessage({ ...data, __type: type, __token: this.meta.authToken }, "*", transfer);
+        const postToParent = isBrowser ? window.parent.postMessage : postMessage;
+        postToParent({ ...data, __type: type, __token: this.meta.authToken }, "*", transfer);
     }
 
     async execute<T extends Operation<O>>(operation: T, ...args: OperationArgs<O, T>): Promise<OperationArgs<O, T>> {
-        return await receiveData(globalThis as any, "operation", { args, operation, __token: this.meta.authToken }, [], this.init.operationTimeout);
+        return await receiveData(
+            isBrowser ? parent : self,
+            "operation",
+            { args, operation, __token: this.meta.authToken },
+            [],
+            this.init.operationTimeout
+        );
     }
 
     async emitEvent<T extends EventType<I>>(type: T, payload: OperationArgs<I, `event_${T}`>) {
