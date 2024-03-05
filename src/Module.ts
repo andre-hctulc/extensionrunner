@@ -1,4 +1,4 @@
-import { receiveData } from "./shared.js";
+import { devMode, receiveData } from "./shared.js";
 import { EventType, Meta, Operation, OperationArgs, Operations } from "./types.js";
 
 export interface ModuleOptions<I extends Operations, O extends Operations, S = any> {
@@ -111,12 +111,14 @@ export class Module<I extends Operations, O extends Operations, S = any> {
              So we need to handle workers and iframes differently
             */
 
-            // Wroker
+            // Worker
             if (this.target instanceof Worker) {
-                this.target.addEventListener("message", messagesListener);
+                if (devMode) console.log("Listening on worker for messages");
+                this.target.onmessage = messagesListener;
             }
             // IFrame
             else {
+                if (devMode) console.log("Listening to window for messages");
                 (window as Window).addEventListener("message", messagesListener);
             }
 

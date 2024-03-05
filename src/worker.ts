@@ -1,9 +1,9 @@
-import { devMode } from "./shared.js";
-import type { Meta } from "./types.js";
-
 /*
 Import the extension module from github or unpkg
+Do not use imports here, they ccannot be resolved (See script postbuild)
 */
+
+const devMode = process.env.NODE_ENV !== "production";
 
 let started = false;
 
@@ -16,7 +16,7 @@ self.onmessage = async e => {
 
     // If init message
     if (e.data?.__type == "meta" && typeof e.data.meta === "object") {
-        const meta: Meta = e.data.meta;
+        const meta: any = e.data.meta;
 
         // Check meta
         if (!isNonEmptyStr(meta.path)) throw new Error("Invalid path");
@@ -49,3 +49,5 @@ self.onmessage = async e => {
         }
     }
 };
+
+export {};
