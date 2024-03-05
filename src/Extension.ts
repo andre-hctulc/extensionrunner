@@ -10,7 +10,6 @@ export type ExtensionInit = {
     name: string;
     /** npm version */
     version: string;
-    onError?: (err: Error) => void;
     onPushState?: (newState: any, source: Module<any, any, any>) => void;
     /**
      * Time in milliseconds to wait for a module operation to complete
@@ -38,8 +37,9 @@ export interface PackageJSON {
     keywords: string[];
 }
 
+const jsdelivr = "https://cdn.jsdelivr.net";
+
 export class Extension extends Events<string, (payload: any, module: Module<any, any, any>) => void> {
-    readonly origin: string;
     readonly url: string = "";
     private _pkg: Partial<PackageJSON> = {};
     private started = false;
@@ -50,11 +50,9 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         super();
         if (this.type === "github") {
             const [owner, repo] = this.init.name.split("/");
-            this.origin = "https://cdn.jsdelivr.net";
-            this.url = `${this.origin}/gh/${owner}/${repo}@${init.version}/`;
+            this.url = `${jsdelivr}/gh/${owner}/${repo}@${init.version}/`;
         } else if (this.type === "npm") {
-            this.origin = "https://unpkg.com";
-            this.url = `${this.origin}/${this.init.name}@${this.init.version}/`;
+            this.url = `${jsdelivr}/npm/${init.name}@${init.version}/`;
         } else throw new Error("Invalid type ('npm' or 'github' expected)");
     }
 
@@ -81,7 +79,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         const blob = new Blob([workerCode], { type: "application/javascript" });
         const url = URL.createObjectURL(blob); // TODO revoke object url
         const worker_ = new Worker(url, { type: "module" });
-        const mod: Module<any, any, any> = this.initModule(worker_ as any, path, out, meta);
+        const mod: Module<any, any, any> = this.initModule(worker_ as any, jsdelivr, path, out, meta);
 
         return mod.start();
     }
@@ -94,11 +92,23 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
     ): Promise<Module<I, O, S>> {
         path = relPath(path);
 
-        // create iframe and append to parentElement
-
+        // Most CDNs do not directly serve html files, they serve the html as a string in a response. So does jsdelivr and unpkg.
+        // So we fetch the html and use ifrm.srcdoc to load the html
         const iframe = document.createElement("iframe");
+        let url: string;
+        let origin: string;
 
-        iframe.src = this.url + path;
+        if (this.type === "github") {
+            const [owner, repo] = this.init.name.split("/");
+            origin = "https://raw.githack.com";
+            url = `https://raw.githack.com/${owner}/${repo}/${this.init.version}/${path}`;
+        } else if (this.type === "npm") {
+            // TODO see Info.md CDNs
+            origin = "https://unpkg.com";
+            url = `${origin}/${this.init.name}@${this.init.version}/${path}`;
+        } else throw new Error("Invalid type ('npm' or 'github' expected)");
+
+        iframe.src = url;
         iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
         // TODOD more attrs?
 
@@ -106,7 +116,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         return new Promise<Module<I, O, S>>((resolve, reject) => {
             iframe.onload = async e => {
                 if (!iframe.contentWindow) return reject("`contentWindow`ndow not defined");
-                const mod: Module<any, any, any> = this.initModule(iframe.contentWindow, path, out, meta);
+                const mod: Module<any, any, any> = this.initModule(iframe.contentWindow, origin, path, out, meta);
                 resolve(mod.start());
             };
 
@@ -120,6 +130,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
 
     private initModule<I extends Operations, O extends Operations, S = any>(
         target: MessageEventSource,
+        origin: string,
         path: string,
         out: O,
         meta?: MetaExtension
@@ -142,7 +153,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
 
         // create module
 
-        const mod = new Module<I, O, S>(this, this.origin, target, _meta, out, {
+        const mod = new Module<I, O, S>(this, origin, target, _meta, out, {
             onPushState: (newState, populate) => {
                 if (populate) this.pushState(moduleName, newState, undefined, [mod]);
                 this.init.onPushState?.(newState, mod);

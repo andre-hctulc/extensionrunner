@@ -120,7 +120,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
             // Worker
             if (this.target instanceof Worker) {
                 if (this.logs) console.log("Listening on worker for messages");
-                this.target.onmessage = messagesListener;
+                this.target.addEventListener("message", messagesListener);
             }
             // IFrame
             else {

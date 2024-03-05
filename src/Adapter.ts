@@ -14,7 +14,7 @@ const metaListener: (e: MessageEvent) => void = (e: MessageEvent) => {
     if ((globalThis as any).meta && typeof (globalThis as any).meta === "object") return removeEventListener("message", metaListener);
 
     const d = getMessageData(e, "meta");
-
+ 
     if (d) {
         (globalThis as any).meta = d.meta;
         removeEventListener("message", metaListener);

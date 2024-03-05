@@ -11,8 +11,7 @@ export function getMessageData(e: MessageEvent, type: string): Record<string, an
 
 export function randomId() {
     const timestamp = new Date().getTime();
-    const random = Math.random().toString(36).substr(2, 9); // Extracting 9 characters
-
+    const random = Math.random().toString(36).substring(2, 9);
     return `${timestamp}${random}`;
 }
 

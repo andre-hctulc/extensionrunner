@@ -30,11 +30,11 @@ self.onmessage = async e => {
         // do not use template strings here, post build script wraps this code in ``
         if (meta.type === "npm") {
             // unpkg
-            importUrl = "https://unpkg.com/" + meta.name + "@" + meta.version + "/" + meta.path;
+            importUrl = "https://cdn.jsdelivr.net/gh/" + meta.name + "@" + meta.version + "/" + meta.path;
         } else if (meta.type === "github") {
             // Use jsdelivr for github, as github does not support Commit shas or CORS
             const [owner, repo] = meta.name.split("/");
-            importUrl = "https://cdn.jsdelivr.net/gh/" + owner + "/" + repo + "@" + meta.version + "/" + meta.path;
+            importUrl = "https://cdn.jsdelivr.net/npm/" + meta.name + "@" + meta.version + "/" + meta.path;
         } else throw new Error("Invalid type ('npm' or 'github' expected)");
 
         try {
