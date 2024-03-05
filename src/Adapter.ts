@@ -1,4 +1,4 @@
-import { Events, devMode, getMessageData, receiveData } from "./shared.js";
+import { Events, getMessageData, receiveData } from "./shared.js";
 import { EventType, Meta, Operation, OperationArgs, Operations } from "./types.js";
 
 /*
@@ -16,8 +16,6 @@ const metaListener: (e: MessageEvent) => void = (e: MessageEvent) => {
     const d = getMessageData(e, "meta");
 
     if (d) {
-        if (devMode) console.log("initialized (meta received)");
-
         (globalThis as any).meta = d.meta;
         removeEventListener("message", metaListener);
         // notify ready

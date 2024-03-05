@@ -1,4 +1,5 @@
 import { Module } from "./Module.js";
+import type { Provider } from "./Provider.js";
 import { Events, randomId, relPath } from "./shared.js";
 import type { Meta, MetaExtension, Operations } from "./types.js";
 import * as worker from "./worker.js";
@@ -45,7 +46,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
     /** `<module_id, { instances: <Module, data>, sharedState: any }>` */
     private cache = new Map<string, { instances: Map<Module<any, any, any>, { state?: { data: any } }>; sharedState: any }>();
 
-    constructor(private init: ExtensionInit) {
+    constructor(readonly provider: Provider, private init: ExtensionInit) {
         super();
         if (this.type === "github") {
             const [owner, repo] = this.init.name.split("/");
@@ -141,7 +142,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
 
         // create module
 
-        const mod = new Module<I, O, S>(this.origin, target, _meta, out, {
+        const mod = new Module<I, O, S>(this, this.origin, target, _meta, out, {
             onPushState: (newState, populate) => {
                 if (populate) this.pushState(moduleName, newState, undefined, [mod]);
                 this.init.onPushState?.(newState, mod);

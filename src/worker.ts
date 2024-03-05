@@ -3,8 +3,6 @@ Import the extension module from github or unpkg
 Do not use imports here, they ccannot be resolved (See script postbuild)
 */
 
-const devMode = process.env.NODE_ENV !== "production";
-
 let started = false;
 
 const isNonEmptyStr = (s: any) => !!s && typeof s === "string";
@@ -40,12 +38,11 @@ self.onmessage = async e => {
         } else throw new Error("Invalid type ('npm' or 'github' expected)");
 
         try {
-            if (devMode) console.log("Importing module", importUrl);
             const mod = await import(importUrl);
             postMessage({ __type: "ready", __token: meta.authToken });
-            if (devMode) console.log("Imported module", importUrl);
         } catch (err) {
             console.error("Failed to import module", err);
+            postMessage({ __type: "import_error", __token: meta.authToken });
         }
     }
 };

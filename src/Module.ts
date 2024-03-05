@@ -1,4 +1,5 @@
-import { devMode, receiveData } from "./shared.js";
+import type { Extension } from "./Extension.js";
+import { receiveData } from "./shared.js";
 import { EventType, Meta, Operation, OperationArgs, Operations } from "./types.js";
 
 export interface ModuleOptions<I extends Operations, O extends Operations, S = any> {
@@ -19,13 +20,18 @@ export interface ModuleOptions<I extends Operations, O extends Operations, S = a
 
 /** Represents an iframe or a worker */
 export class Module<I extends Operations, O extends Operations, S = any> {
+    private logs: boolean;
+
     constructor(
+        readonly extension: Extension,
         readonly origin: string,
         readonly target: MessageEventSource,
         readonly meta: Meta,
         private out: O,
         protected options: ModuleOptions<I, O, S>
-    ) {}
+    ) {
+        this.logs = !!this.extension.provider.options?.logs;
+    }
 
     private inited = false;
     private started = false;
@@ -113,12 +119,12 @@ export class Module<I extends Operations, O extends Operations, S = any> {
 
             // Worker
             if (this.target instanceof Worker) {
-                if (devMode) console.log("Listening on worker for messages");
+                if (this.logs) console.log("Listening on worker for messages");
                 this.target.onmessage = messagesListener;
             }
             // IFrame
             else {
-                if (devMode) console.log("Listening to window for messages");
+                if (this.logs) console.log("Listening to window for messages");
                 (window as Window).addEventListener("message", messagesListener);
             }
 

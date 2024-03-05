@@ -1,5 +1,3 @@
-export const devMode = process.env.NODE_ENV === "development";
-
 export function relPath(path: string) {
     if (path.startsWith("./")) path = path.slice(2);
     else if (path.startsWith("/")) path = path.slice(1);

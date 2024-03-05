@@ -2,7 +2,9 @@ import type { ExtensionInit } from "./Extension.js";
 import { Extension } from "./Extension.js";
 import type { Operations } from "./types.js";
 
-interface ProviderOptions {}
+interface ProviderOptions {
+    logs?: boolean;
+}
 
 export class Provider {
     constructor(readonly options?: ProviderOptions) {}
@@ -10,7 +12,7 @@ export class Provider {
     private cache = new Map<string, Extension>();
 
     async loadExtension<I extends Operations, O extends Operations>(extensionInit: ExtensionInit) {
-        const extension = new Extension(extensionInit);
+        const extension = new Extension(this, extensionInit);
         try {
             await extension.start();
         } catch (err) {
