@@ -41,6 +41,11 @@ export type AdapterInit<I extends Operations, O extends Operations, S = any> = {
     initialState?: S;
     // TODO mommentarily only provider is allowed
     allowOrigins?: string[];
+    /**
+     * Max time to wait for the provider to start
+     * @default 5000
+     * */
+    startTimeout?: number;
 };
 
 /** Extension adapter */
@@ -93,11 +98,36 @@ export default class Adapter<I extends Operations, O extends Operations, S = any
         });
     }
 
+    private started = false;
+
+    async start(): Promise<this> {
+        if (this.started) return this;
+        this.started = true;
+        return new Promise((resolve, reject) => {
+            let resolved = false;
+
+            setTimeout(() => {
+                if (resolved) return;
+                resolved = true;
+                return reject(new Error("Provider start timeout"));
+            }, this.init.startTimeout || 5000);
+
+            // await meta init (the meta init listener is defined globally, so it is guaranteed to be called before)
+            addEventListener("message", e => {
+                const d = getMessageData(e, "meta");
+                if (d && !resolved) {
+                    resolved = true;
+                    resolve(this);
+                }
+            });
+        });
+    }
+
     // API
 
     get meta(): Meta {
         const m = (globalThis as any).meta;
-        if (!m || typeof m !== "object") throw new Error("Meta not defined");
+        if (!m || typeof m !== "object") throw new Error("Meta not defined. " + (this.started ? "(unexpected)" : "The adapter has not been started"));
         return m;
     }
 

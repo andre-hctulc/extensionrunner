@@ -163,7 +163,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
         return await receiveData(this.target, "operation", { args, operation }, "*", [], this.options.operationTimeout);
     }
 
-    async emitEvent<T extends EventType<I>>(type: T, payload: OperationArgs<I, `event_${T}`>) {
+    async emitEvent<T extends EventType<I>>(type: T, payload?: OperationArgs<I, `event_${T}`>) {
         this.postMessage("event", { event: type, args: payload });
     }
 

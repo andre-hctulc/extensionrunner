@@ -74,11 +74,10 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         meta?: MetaExtension
     ): Promise<Module<I, O, S>> {
         path = relPath(path || "");
-        // TODO npm/extensiontunner@version/...  version not specified -> latest version is used
-        const corsWorker = new CorsWorker(jsdelivr + "/npm/extensionrunner/worker.js", { type: "module", name: `${this.init.name}:${path}` });
+        // IMP use correct npm version for the newest wroker build (extensionrunner@version)
+        const corsWorker = new CorsWorker(jsdelivr + "/npm/extensionrunner@1.0.29/worker.js", { type: "module", name: `${this.init.name}:${path}` });
         await corsWorker.init();
         const mod: Module<any, any, any> = this.initModule(corsWorker.worker, jsdelivr, path, out, meta);
-
         return mod.start();
     }
 
