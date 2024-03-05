@@ -68,7 +68,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
     /**
      * @param path Use _null_ or empty string for the packages entry file
      */
-    async launchModule<I extends Operations, O extends Operations, S = any>(
+    async launchModule<I extends Operations<Module<I, O, S>>, O extends Operations<Module<I, O, S>>, S = any>(
         path: string | null,
         out: O,
         meta?: MetaExtension
@@ -81,7 +81,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         return mod.start();
     }
 
-    async launchIFrame<I extends Operations, O extends Operations, S = any>(
+    async launchIFram<I extends Operations<Module<I, O, S>>, O extends Operations<Module<I, O, S>>, S = any>(
         parentElement: Element,
         path: string,
         out: O,
@@ -125,7 +125,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         });
     }
 
-    private initModule<I extends Operations, O extends Operations, S = any>(
+    private initModule<I extends Operations<Module<I, O, S>>, O extends Operations<Module<I, O, S>>, S = any>(
         target: Window | Worker,
         origin: string,
         path: string,

@@ -1,8 +1,8 @@
 import type { Extension } from "./Extension.js";
 import { receiveData } from "./shared.js";
-import { EventType, Meta, Operation, OperationArgs, Operations } from "./types.js";
+import { EventType, Meta, Operation, OperationArgs, OperationName, Operations } from "./types.js";
 
-export interface ModuleOptions<I extends Operations, O extends Operations, S = any> {
+export interface ModuleOptions<I extends Operations<Module<I, O, S>>, O extends Operations<Module<I, O, S>>, S = any> {
     onError?: (err: Error) => void;
     onPushState?: (newState: S, populate: boolean) => void;
     onEvent?: (type: EventType<I>, payload: OperationArgs<I, `event_${EventType<I>}`>) => void;
@@ -19,7 +19,7 @@ export interface ModuleOptions<I extends Operations, O extends Operations, S = a
 }
 
 /** Represents an iframe or a worker */
-export class Module<I extends Operations, O extends Operations, S = any> {
+export class Module<I extends Operations<Module<I, O, S>>, O extends Operations<Module<I, O, S>>, S = any> {
     private logs: boolean;
 
     constructor(
@@ -78,7 +78,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
                         };
 
                         try {
-                            const result = await op(...args);
+                            const result = await op.apply(this, args);
                             (port as MessagePort).postMessage({ __type: "operation:result", payload: result });
                         } catch (err) {
                             return this.err("Operation Execution Error", err);
@@ -158,7 +158,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
         this.target.postMessage({ ...data, __type: type }, { transfer });
     }
 
-    async execute<T extends Operation<O>>(operation: T, ...args: OperationArgs<O, T>): Promise<OperationArgs<O, T>> {
+    async execute<T extends OperationName<O>>(operation: T, ...args: OperationArgs<O, T>): Promise<OperationArgs<O, T>> {
         // TODO "*" origin
         return await receiveData(this.target, "operation", { args, operation }, "*", [], this.options.operationTimeout);
     }

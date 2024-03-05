@@ -1,5 +1,5 @@
 import { Events, getMessageData, isBrowser, postToParent, receiveData } from "./shared.js";
-import { EventType, Meta, Operation, OperationArgs, Operations } from "./types.js";
+import { EventType, Meta, OperationName, OperationArgs, Operations } from "./types.js";
 
 /*
 Runs in Worker/IFrame
@@ -27,7 +27,7 @@ const metaListener: (e: MessageEvent) => void = (e: MessageEvent) => {
 
 addEventListener("message", metaListener);
 
-export type AdapterInit<I extends Operations, O extends Operations, S = any> = {
+export type AdapterInit<I extends Operations<Adapter<I, O, S>>, O extends Operations<Adapter<I, O, S>>, S = any> = {
     /** URL, origin of the provider app */
     provider: string;
     out: O;
@@ -49,7 +49,7 @@ export type AdapterInit<I extends Operations, O extends Operations, S = any> = {
 };
 
 /** Extension adapter */
-export default class Adapter<I extends Operations, O extends Operations, S = any> extends Events<
+export default class Adapter<I extends Operations<Adapter<I, O, S>>, O extends Operations<Adapter<I, O, S>>, S = any> extends Events<
     EventType<I>,
     (payload: OperationArgs<I, `event_${EventType<I>}`>) => void
 > {
@@ -87,7 +87,7 @@ export default class Adapter<I extends Operations, O extends Operations, S = any
                     };
 
                     try {
-                        const result = await op(...(args || []));
+                        const result = await op.apply(this, args);
                         (port as MessagePort).postMessage({ __type: "operation:result", payload: result });
                     } catch (err) {
                         return this.err("Operation Execution Error", err);
@@ -100,8 +100,11 @@ export default class Adapter<I extends Operations, O extends Operations, S = any
 
     private started = false;
 
-    async start(): Promise<this> {
-        if (this.started) return this;
+    async start(onStart?: (adapter: this) => void): Promise<this> {
+        if (this.started) {
+            onStart?.(this);
+            return this;
+        }
         this.started = true;
         return new Promise((resolve, reject) => {
             let resolved = false;
@@ -117,6 +120,7 @@ export default class Adapter<I extends Operations, O extends Operations, S = any
                 const d = getMessageData(e, "meta");
                 if (d && !resolved) {
                     resolved = true;
+                    onStart?.(this);
                     resolve(this);
                 }
             });
@@ -140,7 +144,7 @@ export default class Adapter<I extends Operations, O extends Operations, S = any
         return err;
     }
 
-    async execute<T extends Operation<O>>(operation: T, ...args: OperationArgs<O, T>): Promise<OperationArgs<O, T>> {
+    async execute<T extends OperationName<O>>(operation: T, ...args: OperationArgs<O, T>): Promise<OperationArgs<O, T>> {
         return await receiveData(
             isBrowser ? parent : self,
             "operation",
