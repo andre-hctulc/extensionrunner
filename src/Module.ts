@@ -42,9 +42,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
 
             let resolved = false;
 
-            // handle messages
-            // on global object as cross origin iframes do not allow to listen to messages on the iframe.contentWindow object
-            (window as Window).addEventListener("message", async e => {
+            const messagesListener: (e: MessageEvent) => void = async e => {
                 // authenticate
                 // TODO if (e.origin !== this.origin) return;
                 // TODO if (e.data?.__token !== this.meta.authToken) return;
@@ -72,7 +70,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
                         (port as MessagePort).onmessageerror = e => {
                             this.err("Operation Channel Error", e);
                         };
-                        
+
                         try {
                             const result = await op(...args);
                             (port as MessagePort).postMessage({ __type: "operation:result", payload: result });
@@ -105,7 +103,22 @@ export class Module<I extends Operations, O extends Operations, S = any> {
 
                         break;
                 }
-            });
+            };
+
+            /*
+             worker messages are only received via Worker.onmessage, 
+             whereas iframe messages are received via window.onmessage or iframe.contentWindow.onmessage.
+             So we need to handle workers and iframes differently
+            */
+
+            // Wroker
+            if (this.target instanceof Worker) {
+                this.target.addEventListener("message", messagesListener);
+            }
+            // IFrame
+            else {
+                (window as Window).addEventListener("message", messagesListener);
+            }
 
             // Post meta:
             // - Workers need this to import the module in the worker initialization, whoich dynamicaally imports the module
@@ -129,6 +142,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
             event instanceof Event ? ((event as any).message || (event as any).data || "").toString() : event instanceof Error ? event.message : "";
         const err = new Error(`${info}${msg ? ": " + msg : ""}`);
         this.options?.onError?.(err);
+        console.error(info, err);
         return err;
     }
 

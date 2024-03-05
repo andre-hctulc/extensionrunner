@@ -1,3 +1,4 @@
+import { devMode } from "./shared.js";
 import type { Meta } from "./types.js";
 
 /*
@@ -39,13 +40,12 @@ self.onmessage = async e => {
         } else throw new Error("Invalid type ('npm' or 'github' expected)");
 
         try {
-            console.log("Importing module", importUrl);
+            if (devMode) console.log("Importing module", importUrl);
             const mod = await import(importUrl);
-            console.log("Imported", importUrl);
             postMessage({ __type: "ready", __token: meta.authToken });
+            if (devMode) console.log("Imported module", importUrl);
         } catch (err) {
             console.error("Failed to import module", err);
-            postMessage({ __type: "import_failed", __token: meta.authToken });
         }
     }
 };

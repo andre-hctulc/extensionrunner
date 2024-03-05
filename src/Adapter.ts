@@ -1,4 +1,4 @@
-import { Events, getMessageData, receiveData } from "./shared.js";
+import { Events, devMode, getMessageData, receiveData } from "./shared.js";
 import { EventType, Meta, Operation, OperationArgs, Operations } from "./types.js";
 
 /*
@@ -16,6 +16,8 @@ const metaListener: (e: MessageEvent) => void = (e: MessageEvent) => {
     const d = getMessageData(e, "meta");
 
     if (d) {
+        if (devMode) console.log("initialized (meta received)");
+
         (globalThis as any).meta = d.meta;
         removeEventListener("message", metaListener);
         // notify ready
@@ -104,6 +106,7 @@ export default class Adapter<I extends Operations, O extends Operations, S = any
             event instanceof Event ? ((event as any).message || (event as any).data || "").toString() : event instanceof Error ? event.message : "";
         const err = new Error(`${info}${msg ? ": " + msg : ""}`);
         this?.init?.onError?.(err);
+        console.error(info, err);
         return err;
     }
 
