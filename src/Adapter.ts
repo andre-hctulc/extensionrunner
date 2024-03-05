@@ -11,11 +11,12 @@ Runs in Worker/IFrame
 // - For Modules the meta gets posted to the worker initialization which dynamically imports the module (and this file)
 //   which means the meta should already be defined
 const metaListener: (e: MessageEvent) => void = (e: MessageEvent) => {
-    if ((globalThis as any).meta && typeof (globalThis as any).meta === "object") return removeEventListener("message", metaListener);
+    //TODO if ((globalThis as any).meta && typeof (globalThis as any).meta === "object") return removeEventListener("message", metaListener);
 
     const d = getMessageData(e, "meta");
- 
+
     if (d) {
+        console.log("Meta received", d.meta);
         (globalThis as any).meta = d.meta;
         removeEventListener("message", metaListener);
         // notify ready

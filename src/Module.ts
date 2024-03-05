@@ -124,14 +124,14 @@ export class Module<I extends Operations, O extends Operations, S = any> {
             }
             // IFrame
             else {
-                if (this.logs) console.log("Listening to window for messages");
+                if (this.logs) console.log("Listening on window for messages");
                 (window as Window).addEventListener("message", messagesListener);
             }
 
             // Post meta:
-            // - Workers need this to import the module in the worker initialization, whoich dynamicaally imports the module
+            // - Workers need this to import the module in the worker initialization, whoich dynamically imports the module
             // - Iframes need this to init their meta
-            this.target.postMessage({ __type: "meta", meta: this.meta }, { targetOrigin: "*" });
+            this.target.postMessage({ __type: "meta", meta: this.meta }, { targetOrigin: "*" }); // TODO targetOrigin
 
             setTimeout(() => {
                 if (!resolved) reject(this.err("Connection timeout", null));

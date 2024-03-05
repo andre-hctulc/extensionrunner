@@ -135,15 +135,13 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         out: O,
         meta?: MetaExtension
     ): Module<I, O, S> {
-        const moduleName = `iframe:${path}`;
-
         // genrate random id
 
         let _meta: Meta = {
             authToken: randomId(),
             name: this.init.name,
             path,
-            state: this.cache.get(moduleName)?.sharedState,
+            state: this.cache.get(path)?.sharedState,
             version: this.init.version,
             type: this.init.type,
         };
@@ -155,7 +153,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
 
         const mod = new Module<I, O, S>(this, origin, target, _meta, out, {
             onPushState: (newState, populate) => {
-                if (populate) this.pushState(moduleName, newState, undefined, [mod]);
+                if (populate) this.pushState(path, newState, undefined, [mod]);
                 this.init.onPushState?.(newState, mod);
             },
             onEvent: (type, payload) => {
@@ -167,10 +165,10 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
 
         // cache
 
-        let instances = this.cache.get(moduleName)?.instances;
+        let instances = this.cache.get(path)?.instances;
         if (!instances) {
             instances = new Map();
-            this.cache.set(moduleName, { instances, sharedState: undefined });
+            this.cache.set(path, { instances, sharedState: undefined });
         }
         instances.set(mod, { state: undefined });
 
