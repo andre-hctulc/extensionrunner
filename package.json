@@ -6,7 +6,6 @@
         "clear": "rm -rf *.{js,d.ts}",
         "tc": "echo worker && tsc --project worker.tsconfig.json --noEmit && echo browser && tsc --project browser.tsconfig.json --noEmit",
         "build": "echo worker && tsc --project worker.tsconfig.json && echo browser && tsc --project browser.tsconfig.json",
-        "postbuild": "node scripts/workercode.js",
         "update:patch": "npm run build && git add . && git commit -m \"update $npm_package_version^\" && npm version patch",
         "update:minor": "npm run build && git add . && git commit -m \"update $npm_package_version^\" && npm version patch"
     },

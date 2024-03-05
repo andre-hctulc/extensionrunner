@@ -2,7 +2,6 @@ import { Module } from "./Module.js";
 import type { Provider } from "./Provider.js";
 import { Events, randomId, relPath } from "./shared.js";
 import type { Meta, MetaExtension, Operations } from "./types.js";
-import * as worker from "./worker.js";
 
 export type ExtensionInit = {
     type: "github" | "npm";
@@ -74,11 +73,8 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         meta?: MetaExtension
     ): Promise<Module<I, O, S>> {
         path = relPath(path || "");
-        /** The worker code is transformed to a string on build, so we can alwys import it here and start the worker */
-        const workerCode = (worker as any).code;
-        const blob = new Blob([workerCode], { type: "application/javascript" });
-        const url = URL.createObjectURL(blob); // TODO revoke object url
-        const worker_ = new Worker(url, { type: "module" });
+        // TODO npm/extensiontunner@version/...  version not specified -> latest version is used
+        const worker_ = new Worker(jsdelivr + "/npm/extensionrunner/worker.js", { type: "module" });
         const mod: Module<any, any, any> = this.initModule(worker_ as any, jsdelivr, path, out, meta);
 
         return mod.start();

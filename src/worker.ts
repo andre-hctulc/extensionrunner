@@ -1,6 +1,6 @@
 /*
 Import the extension module from github or unpkg
-Do not use imports here, they ccannot be resolved (See script postbuild)
+Do not use imports here, they cannot be resolved (See script postbuild), type imports work
 */
 
 let started = false;
