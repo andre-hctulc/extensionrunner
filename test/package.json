@@ -5,13 +5,12 @@
     "main": "index.js",
     "scripts": {
         "build": "webpack --mode development",
-        "serve": "npx serve dist -p 3444"
+        "serve": "npx serve dist -p 3444",
+        "dev": "npm run build && npm run serve"
     },
     "author": "",
     "license": "ISC",
-    "dependencies": {
-        "extensionrunner": ".."
-    },
+    "dependencies": {},
     "devDependencies": {
         "html-bundler-webpack-plugin": "^3.5.5",
         "webpack": "^5.90.3",

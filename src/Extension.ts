@@ -1,3 +1,4 @@
+import { CorsWorker } from "./CorsWorker.js";
 import { Module } from "./Module.js";
 import type { Provider } from "./Provider.js";
 import { Events, randomId, relPath } from "./shared.js";
@@ -74,8 +75,9 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
     ): Promise<Module<I, O, S>> {
         path = relPath(path || "");
         // TODO npm/extensiontunner@version/...  version not specified -> latest version is used
-        const worker_ = new Worker(jsdelivr + "/npm/extensionrunner/worker.js", { type: "module" });
-        const mod: Module<any, any, any> = this.initModule(worker_ as any, jsdelivr, path, out, meta);
+        const corsWorker = new CorsWorker(jsdelivr + "/npm/extensionrunner/worker.js", { type: "module", name: `${this.init.name}:${path}` });
+        await corsWorker.init();
+        const mod: Module<any, any, any> = this.initModule(corsWorker.worker, jsdelivr, path, out, meta);
 
         return mod.start();
     }
@@ -97,7 +99,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         if (this.type === "github") {
             const [owner, repo] = this.init.name.split("/");
             origin = "https://raw.githack.com";
-            url = `https://raw.githack.com/${owner}/${repo}/${this.init.version}/${path}`;
+            url = `${origin}/${owner}/${repo}/${this.init.version}/${path}`;
         } else if (this.type === "npm") {
             // TODO see Info.md CDNs
             origin = "https://unpkg.com";
