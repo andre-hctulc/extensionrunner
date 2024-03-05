@@ -129,7 +129,7 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
     }
 
     private initModule<I extends Operations, O extends Operations, S = any>(
-        target: MessageEventSource,
+        target: Window | Worker,
         origin: string,
         path: string,
         out: O,

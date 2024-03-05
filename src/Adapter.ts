@@ -1,12 +1,9 @@
-import { Events, getMessageData, receiveData } from "./shared.js";
+import { Events, getMessageData, isBrowser, postToParent, receiveData } from "./shared.js";
 import { EventType, Meta, Operation, OperationArgs, Operations } from "./types.js";
 
 /*
 Runs in Worker/IFrame
 */
-
-const isBrowser = typeof window !== "undefined" && window === window.self;
-const postToParent = isBrowser ? window.parent.postMessage : postMessage;
 
 // Listen to meta init
 
@@ -23,7 +20,7 @@ const metaListener: (e: MessageEvent) => void = (e: MessageEvent) => {
         console.log("Meta received", d.meta);
         (globalThis as any).meta = d.meta;
         // notify ready (Use parent.postmessage)
-        postToParent({ __type: "ready", __token: d.meta.authToken }, { targetOrigin: "*" });
+        postToParent("ready", { __token: d.meta.authToken });
         removeEventListener("message", metaListener);
     }
 };
@@ -113,25 +110,23 @@ export default class Adapter<I extends Operations, O extends Operations, S = any
         return err;
     }
 
-    protected postMessage(type: string, data: object, transfer?: Transferable[]) {
-        postToParent({ ...data, __type: type, __token: this.meta.authToken }, "*", transfer);
-    }
-
     async execute<T extends Operation<O>>(operation: T, ...args: OperationArgs<O, T>): Promise<OperationArgs<O, T>> {
         return await receiveData(
             isBrowser ? parent : self,
             "operation",
             { args, operation, __token: this.meta.authToken },
+            // TODO
+            "*",
             [],
             this.init.operationTimeout
         );
     }
 
     async emitEvent<T extends EventType<I>>(type: T, payload: OperationArgs<I, `event_${T}`>) {
-        this.postMessage("event", { event: type, args: payload });
+        postToParent("event", { event: type, args: payload });
     }
 
     async pushState(newState: S | undefined, populate = true) {
-        this.postMessage("state_push", { state: newState, populate });
+        postToParent("state_push", { state: newState, populate });
     }
 }

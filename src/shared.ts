@@ -15,7 +15,22 @@ export function randomId() {
     return `${timestamp}${random}`;
 }
 
-export async function receiveData(target: MessageEventSource, type: string, data: object, transfer: Transferable[], errTimeout = 5000) {
+export const isBrowser = typeof window !== "undefined" && window === window.self;
+
+// TODO origin
+export function postToParent(type: string, data: object, origin = "*", transfer?: Transferable[]) {
+    if (isBrowser) window.parent.postMessage({ ...data, __type: type }, origin, transfer || []);
+    else self.postMessage({ ...data, __type: type }, origin, transfer || []);
+}
+
+export async function receiveData(
+    target: typeof globalThis | Window | Worker,
+    type: string,
+    data: object,
+    origin = "*",
+    transfer?: Transferable[],
+    errTimeout = 5000
+) {
     return new Promise<any>((resolve, reject) => {
         const channel = new MessageChannel();
         const out = channel.port1;
@@ -40,7 +55,9 @@ export async function receiveData(target: MessageEventSource, type: string, data
             reject(new Error("Channel Error (out)"));
         };
 
-        target.postMessage({ ...data, __type: type, __port: _in }, { transfer: [_in, ...transfer] });
+        if (target instanceof Worker) {
+            target.postMessage({ ...data, __type: type, __port: _in }, { transfer: [_in, ...(transfer || [])] });
+        } else target.postMessage({ ...data, __type: type, __port: _in }, origin, [_in, ...(transfer || [])]);
     });
 }
 

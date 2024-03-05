@@ -25,7 +25,7 @@ export class Module<I extends Operations, O extends Operations, S = any> {
     constructor(
         readonly extension: Extension,
         readonly origin: string,
-        readonly target: MessageEventSource,
+        readonly target: Window | Worker,
         readonly meta: Meta,
         private out: O,
         protected options: ModuleOptions<I, O, S>
@@ -159,7 +159,8 @@ export class Module<I extends Operations, O extends Operations, S = any> {
     }
 
     async execute<T extends Operation<O>>(operation: T, ...args: OperationArgs<O, T>): Promise<OperationArgs<O, T>> {
-        return await receiveData(this.target, "operation", { args, operation }, [], this.options.operationTimeout);
+        // TODO "*" origin
+        return await receiveData(this.target, "operation", { args, operation }, "*", [], this.options.operationTimeout);
     }
 
     async emitEvent<T extends EventType<I>>(type: T, payload: OperationArgs<I, `event_${T}`>) {
