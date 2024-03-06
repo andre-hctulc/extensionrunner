@@ -1,5 +1,10 @@
 import type { Meta } from "./types";
 
+/*
+Module Worker:
+Imports entry point of modules
+*/
+
 let started = false;
 
 const isNonEmptyStr = (s: any) => !!s && typeof s === "string";

@@ -5,5 +5,3 @@ src
 webpack.config.mjs
 scripts
 .vscode
-*.js
-*.d.ts

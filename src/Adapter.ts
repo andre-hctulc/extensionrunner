@@ -1,6 +1,13 @@
 import { EventsHandler } from "./EventsHandler.js";
-import { getMessageData, isBrowser, postToParent, receiveData } from "./shared.js";
-import type { Meta, OperationName, OperationArgs, Operations, OperationEvents, OperationResult } from "./types.js";
+import { getMessageData, isBrowser, loadFile, randomId, receiveData } from "./shared.js";
+import type {
+    Meta,
+    OperationName,
+    OperationArgs,
+    Operations,
+    OperationEvents,
+    OperationResult,
+} from "./types.js";
 
 /*
 Runs in Worker/IFrame
@@ -21,7 +28,7 @@ const metaListener: (e: MessageEvent) => void = (e: MessageEvent) => {
         setMeta(d.meta);
         setState(d.meta.initialState);
         // notify ready (Use parent.postmessage)
-        postToParent("ready", { __token: d.meta.authToken });
+        postToParent("ready", { __token: d.meta.authToken }, "*");
         removeEventListener("message", metaListener);
     }
 };
@@ -46,6 +53,11 @@ function setState(newState: any) {
     globalThis.$ER.state = newState || {};
 }
 
+export function postToParent(type: string, data: object, origin: string, transfer?: Transferable[]) {
+    if (isBrowser) (window as Window).parent.postMessage({ ...data, __type: type }, origin, transfer || []);
+    else self.postMessage({ ...data, __type: type }, origin, transfer || []);
+}
+
 export type AdapterInit<I extends object, O extends object, S extends object = {}> = {
     /** URL, origin of the provider app */
     provider: string;
@@ -55,8 +67,6 @@ export type AdapterInit<I extends object, O extends object, S extends object = {
      */
     operationTimeout?: number;
     initialState?: S;
-    // TODO mommentarily only provider is allowed
-    allowOrigins?: string[];
     /**
      * Max time to wait for the provider to start
      * @default 5000
@@ -69,12 +79,26 @@ export type AdapterInit<I extends object, O extends object, S extends object = {
 export interface AdapterPushStateOptions {
     /** @default true */
     populate?: boolean;
+    /**
+     * Merge states instead of overwriting them
+     * @default true
+     * */
+    merge?: boolean;
 }
 
-type AdapterEvents<I extends object> = OperationEvents<I> & { push_state: any; load: undefined };
+type AdapterEvents<I extends object> = OperationEvents<I> & {
+    state_push: any;
+    load: undefined;
+};
 
 /** Extension adapter */
-export default class Adapter<I extends object, O extends object = {}, S extends object = {}> extends EventsHandler<AdapterEvents<O>> {
+export default class Adapter<
+    I extends object,
+    O extends object = {},
+    S extends object = {}
+> extends EventsHandler<AdapterEvents<O>> {
+    readonly id = "adapter_id:" + randomId();
+
     constructor(readonly init: AdapterInit<I, O, S>) {
         super();
         this.listen();
@@ -83,7 +107,7 @@ export default class Adapter<I extends object, O extends object = {}, S extends 
     private listen() {
         // handle messages
         addEventListener("message", async e => {
-            // TODO if(e.origin !== this.init.provider) return this.error("Unauthorized");
+            if (e.origin !== this.init.provider) return;
 
             if (typeof e?.data?.__type !== "string") return;
 
@@ -92,12 +116,13 @@ export default class Adapter<I extends object, O extends object = {}, S extends 
             switch (type) {
                 case "state_push":
                     let newState: any;
-                    if (e.data.options?.merge) {
+                    if (e.data.options) {
                         if (this.init.mergeStates) newState = this.init.mergeStates(getState(), e.data.state);
-                        else newState({ ...getState(), ...e.data.state });
+                        else newState = { ...getState(), ...e.data.state };
                     } else newState = e.data.state;
                     setState(newState);
-                    this.emitEvent("push_state", e.data.state);
+                    console.log("Received state_push", this.id, "New state:", this.state);
+                    this.emitEvent("state_push", e.data.state);
                     break;
                 case "operation":
                     const { args, operation, __port: port } = e.data;
@@ -106,7 +131,6 @@ export default class Adapter<I extends object, O extends object = {}, S extends 
 
                     let op = await (this.init.out as any)?.[operation];
                     if (typeof op !== "function") op = null;
-
                     (port as MessagePort).onmessageerror = e => {
                         this.err("Operation Channel Error", e);
                     };
@@ -114,14 +138,30 @@ export default class Adapter<I extends object, O extends object = {}, S extends 
                     if (op) {
                         try {
                             const result = await op.apply(this, args);
-                            (port as MessagePort).postMessage({ __type: "operation:result", payload: result });
-                            this.emitEvent(`op:${operation}`, { args, result, error: null } as any);
+                            (port as MessagePort).postMessage({
+                                __type: "operation:result",
+                                payload: result,
+                            });
+                            this.emitEvent(`op:${operation}`, {
+                                args,
+                                result,
+                                error: null,
+                            } as any);
                         } catch (err) {
                             const error = this.err("Operation Execution Error", err);
-                            this.emitEvent(`op:${operation}`, { args, result: undefined, error } as any);
+                            this.emitEvent(`op:${operation}`, {
+                                args,
+                                result: undefined,
+                                error,
+                            } as any);
                             return;
                         }
-                    } else this.emitEvent(`op:${operation}`, { args, result: undefined, error: null } as any);
+                    } else
+                        this.emitEvent(`op:${operation}`, {
+                            args,
+                            result: undefined,
+                            error: null,
+                        } as any);
 
                     break;
             }
@@ -131,11 +171,16 @@ export default class Adapter<I extends object, O extends object = {}, S extends 
     private started = false;
 
     async start(onStart?: (this: Adapter<I, O, S>, adapter: this) => void): Promise<this> {
-        if (this.started) {
+        if (this.started) return this;
+
+        this.started = true;
+
+        // Already initialzed? modules are initialized before the adapter can mount (module worker src/worker.ts)
+        if (getMeta()) {
             if (onStart) onStart.apply(this, [this]);
             return this;
         }
-        this.started = true;
+        
         return new Promise((resolve, reject) => {
             let resolved = false;
 
@@ -161,7 +206,10 @@ export default class Adapter<I extends object, O extends object = {}, S extends 
 
     get meta(): Meta {
         const m = getMeta();
-        if (!m) throw new Error("Meta not defined. " + (this.started ? "(unexpected)" : "The adapter has not been started"));
+        if (!m)
+            throw new Error(
+                "Meta not defined. " + (this.started ? "(unexpected)" : "The adapter has not been started")
+            );
         return m;
     }
 
@@ -171,31 +219,49 @@ export default class Adapter<I extends object, O extends object = {}, S extends 
 
     protected err(info: string, event: Event | unknown) {
         const msg =
-            event instanceof Event ? ((event as any).message || (event as any).data || "").toString() : event instanceof Error ? event.message : "";
+            event instanceof Event
+                ? ((event as any).message || (event as any).data || "").toString()
+                : event instanceof Error
+                ? event.message
+                : "";
         const err = new Error(`${info}${msg ? ": " + msg : ""}`);
         console.error(info, err);
         return err;
     }
 
-    async execute<T extends OperationName<I>>(operation: T, ...args: OperationArgs<I, T>): Promise<OperationResult<I, T>> {
+    async execute<T extends OperationName<I>>(
+        operation: T,
+        ...args: OperationArgs<I, T>
+    ): Promise<OperationResult<I, T>> {
         return await receiveData(
             isBrowser ? parent : self,
             "operation",
             { args, operation, __token: this.meta.authToken },
-            // TODO
-            "*",
+            this.init.provider,
             [],
             this.init.operationTimeout
         );
     }
 
     async pushState(newState: S | undefined, options?: AdapterPushStateOptions) {
+        console.log("pushState", this.id, newState);
+
         if (options?.populate !== false)
-            postToParent("state_populate", {
-                state: newState,
-                /* Set explicitly to prevent unwanted data from being trandsfered */
-                options: {},
-            });
+            postToParent(
+                "state_populate",
+                {
+                    state: newState,
+                    /* Set props explicitly to prevent unwanted data from being trandsfered */
+                    options: { merge: !options?.merge },
+                    __token: this.meta.authToken,
+                },
+                this.init.provider
+            );
         setState(newState);
+    }
+
+    /** If the response is not ok, the `Response` will be set on the thrown error (`Error.response`) */
+    async loadFile(path: string) {
+        return await loadFile(this.meta.type, this.meta.name, this.meta.version, path);
     }
 }

@@ -2,7 +2,7 @@ import { Operations } from "./types.js";
 import { CorsWorker } from "./CorsWorker.js";
 import { Module } from "./Module.js";
 import type { Provider } from "./Provider.js";
-import { randomId, relPath } from "./shared.js";
+import { jsdelivr, loadFile, randomId, relPath } from "./shared.js";
 import type { Meta, MetaExtension, OperationEvents } from "./types.js";
 import { EventsHandler } from "./EventsHandler.js";
 
@@ -38,8 +38,6 @@ export interface PackageJSON {
     keywords: string[];
 }
 
-const jsdelivr = "https://cdn.jsdelivr.net";
-
 interface ExtensionEvents extends OperationEvents<any> {
     state_populate: { module: Module<any, any, any>; state: any; options: any };
     module_load: Module<any, any, any>;
@@ -47,15 +45,13 @@ interface ExtensionEvents extends OperationEvents<any> {
     destroy: undefined;
 }
 
-/** or logic */
+/** (id _or_ path _or_ check) _and_ !(notPath _or_ notId)  */
 type ModuleFilter = {
     id?: string | string[];
-    notId?: string | string[];
     path?: string | string[];
-    notPath?: string | string[];
     check?: (module: Module<any, any, any>) => boolean;
-    /** Use and logic instead of or */
-    and?: boolean;
+    notPath?: string | string[];
+    notId?: string | string[];
 };
 
 interface ExtensionPushStateOptions {
@@ -66,6 +62,12 @@ interface ExtensionPushStateOptions {
 
 type ModuleCache = { instances: Map<string, Module<any, any, any>>; sharedState: any };
 
+interface LaunchModuleOptions<S extends object> {
+    allowPopulateState?: ((state: Partial<S> | undefined, merge?: boolean) => boolean) | boolean;
+    meta?: MetaExtension;
+    initialState?: S;
+}
+
 export class Extension extends EventsHandler<ExtensionEvents> {
     readonly url: string = "";
     private _pkg: Partial<PackageJSON> = {};
@@ -75,12 +77,6 @@ export class Extension extends EventsHandler<ExtensionEvents> {
 
     constructor(readonly provider: Provider, private init: ExtensionInit) {
         super();
-        if (this.type === "github") {
-            const [owner, repo] = this.init.name.split("/");
-            this.url = `${jsdelivr}/gh/${owner}/${repo}@${init.version}/`;
-        } else if (this.type === "npm") {
-            this.url = `${jsdelivr}/npm/${init.name}@${init.version}/`;
-        } else throw new Error("Invalid type ('npm' or 'github' expected)");
     }
 
     async start() {
@@ -100,15 +96,9 @@ export class Extension extends EventsHandler<ExtensionEvents> {
         const pathsSet = new Set(Array.isArray(filter.path) ? filter.path : [filter.path]);
         const notPathsSet = new Set(Array.isArray(filter.notPath) ? filter.notPath : [filter.notPath]);
         return all.filter(module => {
-            let include = idsSet.has(module.id);
-            if (filter.notId && notIdsSet.has(module.id) && filter.and) include = false;
-            if (filter.path && !pathsSet.has(module.meta.path) && filter.and) include = false;
-            if (filter.notPath && notPathsSet.has(module.meta.path) && filter.and) include = false;
-
-            if (filter.check && !(filter.and && !include)) {
-                if (filter.check(module)) include = true;
-            }
-
+            let include = idsSet.has(module.id) || pathsSet.has(module.meta.path) || !!filter.check?.(module);
+            if (include && notIdsSet.size && notIdsSet.has(module.id)) include = false;
+            if (include && notPathsSet.size && notPathsSet.has(module.meta.path)) include = false;
             return include;
         });
     }
@@ -122,22 +112,31 @@ export class Extension extends EventsHandler<ExtensionEvents> {
      */
     async launchModule<O extends object, I extends object, S extends object = any>(
         path: string | null,
-        out: Operations<Module<O, I, S>, O>,
-        meta?: MetaExtension
+        out: Partial<Operations<Module<O, I, S>, O>>,
+        options?: LaunchModuleOptions<S>
     ): Promise<Module<O, I, S>> {
         path = relPath(path || "");
         // IMP use correct npm version for the newest wroker build (extensionrunner@version)
-        const corsWorker = new CorsWorker(jsdelivr + "/npm/extensionrunner@1.0.29/worker.js", { type: "module", name: `${this.init.name}:${path}` });
+        const corsWorker = new CorsWorker(jsdelivr + "/npm/extensionrunner@1.0.29/worker.js", {
+            type: "module",
+            name: `${this.init.name}:${path}`,
+        });
         await corsWorker.init();
-        const mod: Module<any, any, any> = this.initModule(corsWorker.worker, jsdelivr, path, out, meta);
+        const mod: Module<any, any, any> = this.initModule(
+            corsWorker.worker,
+            jsdelivr,
+            path,
+            out,
+            options || {}
+        );
         return mod.start();
     }
 
     async launchComponent<O extends object, I extends object, S extends object = any>(
         parentElement: Element,
         path: string,
-        out: Operations<Module<O, I, S>, O>,
-        meta?: MetaExtension
+        out: Partial<Operations<Module<O, I, S>, O>>,
+        options?: LaunchModuleOptions<S>
     ): Promise<Module<O, I, S>> {
         path = relPath(path);
 
@@ -165,7 +164,13 @@ export class Extension extends EventsHandler<ExtensionEvents> {
         return new Promise<Module<O, I, S>>((resolve, reject) => {
             iframe.onload = async e => {
                 if (!iframe.contentWindow) return reject("`contentWindow`ndow not defined");
-                const mod: Module<O, I, S> = this.initModule(iframe.contentWindow, origin, path, out, meta);
+                const mod: Module<O, I, S> = this.initModule(
+                    iframe.contentWindow,
+                    origin,
+                    path,
+                    out,
+                    options || {}
+                );
                 resolve(mod.start());
             };
 
@@ -181,12 +186,12 @@ export class Extension extends EventsHandler<ExtensionEvents> {
         target: Window | Worker,
         origin: string,
         path: string,
-        out: Operations<Module<O, I, S>, O>,
-        meta?: MetaExtension
+        out: Partial<Operations<Module<O, I, S>, O>>,
+        options: LaunchModuleOptions<S>
     ): Module<O, I, S> {
-        // genrate random id
+        // create meta
 
-        let _meta: Meta = {
+        let meta: Meta = {
             authToken: randomId(),
             name: this.init.name,
             path,
@@ -195,19 +200,22 @@ export class Extension extends EventsHandler<ExtensionEvents> {
             type: this.init.type,
         };
 
-        _meta = this.init.meta ? this.init.meta(_meta) : _meta;
-        if (meta) _meta = meta(_meta);
+        meta = this.init.meta ? this.init.meta(meta) : meta;
+        if (options.meta) meta = options.meta(meta);
+
+        if (options.initialState !== undefined) meta.initialState = options.initialState;
 
         // create module
 
-        const mod = new Module<O, I, S>(
-            this,
-            { origin, target, meta: _meta, out },
-            {
-                operationTimeout: this.init.operationTimeout,
-                connectionTimeout: this.init.connectionTimeout,
-            }
-        );
+        const mod = new Module<O, I, S>(this, {
+            origin,
+            target,
+            meta: meta,
+            out,
+            operationTimeout: this.init.operationTimeout,
+            connectionTimeout: this.init.connectionTimeout,
+            allowPopulateState: options.allowPopulateState,
+        });
 
         // propagate events
 
@@ -217,10 +225,12 @@ export class Extension extends EventsHandler<ExtensionEvents> {
 
         mod.addEventListener("state_populate", ev => {
             if (this.cache.has(path)) this.cache.get(path)!.sharedState = ev.payload;
-            this.filterModules({ path, notId: mod.id }).forEach(module => {
-                module.pushState(ev.payload, { merge: true });
+            this.pushState(ev.payload.state, { filter: { notId: mod.id, path: mod.meta.path } });
+            this.emitEvent("state_populate", {
+                module: mod,
+                state: ev.payload.state,
+                options: ev.payload.options,
             });
-            this.emitEvent("state_populate", { module: mod, state: ev.payload.state, options: ev.payload.options });
         });
 
         mod.addEventListener("destroy", () => {
@@ -254,22 +264,9 @@ export class Extension extends EventsHandler<ExtensionEvents> {
         return this.init.type;
     }
 
-    private getUrl(path: string, searchParams?: string) {
-        if (searchParams && !searchParams.startsWith("?")) searchParams = "?" + searchParams;
-        return this.url + path + (searchParams || "");
-    }
-
     /** If the response is not ok, the `Response` will be set on the thrown error (`Error.response`) */
     async loadFile(path: string) {
-        if (path.startsWith("/")) path = path.slice(1);
-        else if (path.startsWith("./")) path = path.slice(2);
-        const response = await fetch(this.getUrl(path), this.type === "github" ? {} : {});
-        if (!response.ok) {
-            const error = new Error(`Failed to load file: ${response.statusText}`);
-            (error as any).response = response;
-            throw new Error(`Failed to load file: ${response.statusText}`);
-        }
-        return response;
+        return await loadFile(this.init.type, this.init.name, this.init.version, path);
     }
 
     pushState(newState: any, options?: ExtensionPushStateOptions) {
