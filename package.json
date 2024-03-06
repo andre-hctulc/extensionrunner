@@ -32,9 +32,9 @@
     "devDependencies": {
         "html-bundler-webpack-plugin": "^3.5.5",
         "webpack": "^5.90.3",
+        "typescript": "^5.3.3",
         "webpack-cli": "^5.1.4"
     },
     "dependencies": {
-        "typescript": "^5.3.3"
     }
 }
