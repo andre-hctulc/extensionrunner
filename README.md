@@ -2,7 +2,7 @@
 
 **This package is currently under development**
 
-Clone or fork the GitHub repo for now: 
+Clone or fork the GitHub repo for now: [extensionrunner](https://github.com/andre-hctulc/extensionrunner)
 
 _extensionrunner_ uses CDNs (jsdelivr, githack, unpkg),
 to power external extensions safely in your App via Web Workers and IFrames directly from GitHub or npm.
