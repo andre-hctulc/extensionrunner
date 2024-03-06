@@ -117,7 +117,7 @@ export class Extension extends EventsHandler<ExtensionEvents> {
     ): Promise<Module<O, I, S>> {
         path = relPath(path || "");
         // IMP use correct npm version for the newest wroker build (extensionrunner@version)
-        const corsWorker = new CorsWorker(jsdelivr + "/npm/extensionrunner@1.0.29/worker.js", {
+        const corsWorker = new CorsWorker(jsdelivr + "/npm/extensionrunner@1.0.33/worker.js", {
             type: "module",
             name: `${this.init.name}:${path}`,
         });

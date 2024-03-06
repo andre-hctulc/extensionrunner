@@ -5,3 +5,5 @@ src
 webpack.config.mjs
 scripts
 .vscode
+.prettierrc
+.gitignore

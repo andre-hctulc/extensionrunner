@@ -64,7 +64,8 @@ export class Module<O extends object, I extends object, S extends object = {}> e
             let resolved = false;
 
             const messagesListener: (e: MessageEvent) => void = async e => {
-                if (e.origin !== this.init.origin) return;
+                // origin = "" -> same origin
+                if (e.origin !== "" && e.origin !== this.init.origin) return;
                 if (e.data?.__token !== this.meta.authToken) return;
 
                 if (typeof e?.data?.__type !== "string") return;

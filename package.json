@@ -2,6 +2,13 @@
     "name": "extensionrunner",
     "version": "1.0.33",
     "description": "Import external modules safely from npm or github",
+    "keywords": [
+        "import",
+        "module",
+        "external",
+        "npm",
+        "github"
+    ],
     "scripts": {
         "clear": "rm -rf *.{js,d.ts}",
         "tc": "echo worker && tsc --project worker.tsconfig.json --noEmit && echo browser && tsc --project browser.tsconfig.json --noEmit",
@@ -9,9 +16,9 @@
         "update:patch": "npm run build && git add . && git commit -m \"update $npm_package_version^\" && npm version patch",
         "update:minor": "npm run build && git add . && git commit -m \"update $npm_package_version^\" && npm version minor"
     },
-    "author": "",
+    "author": "André Thomas",
     "type": "module",
-    "license": "ISC",
+    "license": "MIT",
     "main": "index.js",
     "exports": {
         "./adapter": "./Adapter.js",
