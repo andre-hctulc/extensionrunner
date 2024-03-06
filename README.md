@@ -98,63 +98,53 @@ new Adapter({
 _\<github_or_npm\>/components/component.html_
 
 ```html
-<!DOCTYPE html>
+<div>
+    <!-- or external script -->
+    <script type="module">
+        import Adapter from "extensionrunner/adapter";
 
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <!-- or external script -->
-        <script type="module">
-            import Adapter from "extensionrunner/adapter";
+        let counter = 0;
 
-            let counter = 0;
-
-            new Adapter({
-                provider: "https://example.com",
-                out: {
-                    increment: function () {
-                        return (counter += this.state.incrementBy || 1);
-                    },
-                    reset: () => {
-                        counter = 0;
-                    },
+        new Adapter({
+            provider: "https://example.com",
+            out: {
+                increment: function () {
+                    return (counter += this.state.incrementBy || 1);
                 },
-            }).start(adapter => {
-                // Listen to operations (This could also done directly in increment)
-                adapter.addEventListener("op:increment", e => {
-                    document.getElementById("counter").innerHtml = e.payload.result + "";
-                });
-
-                // Listen to other events
-                adapter.addEventListener("state_push", e => {
-                    document.getElementById("increment").innerHtml =
-                        "Incrementing by " + e.payload.incrementBy;
-                });
-
-                document.getElementById("change_increment").onclick = () => {
-                    // Push state inside of a component/module
-                    adapter.pushState(
-                        { incrementBy: 5 },
-                        {
-                            // Share state with other components (components with the same path).
-                            // Defaults to true
-                            populate: true,
-                        }
-                    );
-                };
+                reset: () => {
+                    counter = 0;
+                },
+            },
+        }).start(adapter => {
+            // Listen to operations (This could also done directly in increment)
+            adapter.addEventListener("op:increment", e => {
+                document.getElementById("counter").innerHtml = e.payload.result + "";
             });
-        </script>
-        <title>A Counter Component</title>
-    </head>
-    <body>
-        <h1>Counter</h1>
-        <p id="counter"></p>
-        <p>Incrementing by <span id="increment">1</span></p>
-        <button id="reset">Reset</button>
-        <button id="change_increment_by_btn">Reset</button>
-    </body>
-</html>
+
+            // Listen to other events
+            adapter.addEventListener("state_push", e => {
+                document.getElementById("increment").innerHtml = "Incrementing by " + e.payload.incrementBy;
+            });
+
+            document.getElementById("change_increment").onclick = () => {
+                // Push state inside of a component/module
+                adapter.pushState(
+                    { incrementBy: 5 },
+                    {
+                        // Share state with other components (components with the same path).
+                        // Defaults to true
+                        populate: true,
+                    }
+                );
+            };
+        });
+    </script>
+    <h1>Counter</h1>
+    <p id="counter"></p>
+    <p>Incrementing by <span id="increment">1</span></p>
+    <button id="reset">Reset</button>
+    <button id="change_increment_by_btn">Reset</button>
+</div>
 ```
 
 ## TypeScript
@@ -171,11 +161,20 @@ interface ProviderInterface {
     sum: (a: number, b: number) => number
 }
 
-interface ModuleState {}
+interface ModuleState {
+    user: string;
+}
 
 // Provider
 provider.launchModule<ProviderInterface, ModuleInterface, ModleState>()
 
 // Adapter
 new Adapter<ProviderInterface, ModuleInterface, ModleState>(...).start(...)
+```
+
+## Fetch Files
+
+```ts
+const response = await provider.loadFile("path/to/file");
+const response = await adapter.loadFile("path/to/file");
 ```

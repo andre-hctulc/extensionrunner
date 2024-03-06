@@ -5,10 +5,10 @@ import type { Out as ModuleInterface } from "../../test-extension/src/modules/ma
 import type {
     Out as ComponentInterface,
     State as ComponentsState,
-} from "../../test-extension/src/frames/counter/index.js";
+} from "../../test-extension/src/frames/counter/counter.js";
 
 /** Commit sha of test extension */
-const commitSha = "1b61d27c887d2387243ca89704d7f4aff477b858";
+const commitSha = "da64178aa28b66db02ca2c7bce3d3e4a35d02ad6";
 
 main().catch(err => console.error(err));
 
@@ -41,13 +41,13 @@ async function launchIFrames(extension: Extension) {
             ProviderInterface,
             ComponentInterface,
             ComponentsState
-        >(container, "dist/frames/counter/index.html", providerApi, { allowPopulateState: true });
+        >(container, "dist/frames/counter/counter.html", providerApi, { allowPopulateState: true });
 
         const componentModule2 = await extension.launchComponent<
             ProviderInterface,
             ComponentInterface,
             ComponentsState
-        >(container2, "dist/frames/counter/index.html", providerApi, { allowPopulateState: true });
+        >(container2, "dist/frames/counter/counter.html", providerApi, { allowPopulateState: true });
 
         setInterval(async () => {
             const newCounter = await componentModule.execute("increment");
@@ -105,5 +105,5 @@ async function main() {
     if (info) info.innerHTML = `${extension.pkg.name}@${extension.pkg.version} SHA ${commitSha}`;
 
     launchModule(extension).catch(err => console.error("Error launching module", err));
-    // launchIFrames(extension).catch(err => console.error("Error launching iframe", err));
+    launchIFrames(extension).catch(err => console.error("Error launching iframe", err));
 }
