@@ -23,8 +23,7 @@ const metaListener: (e: MessageEvent) => void = (e: MessageEvent) => {
     if (meta) return removeEventListener("message", metaListener);
     const d = getMessageData(e, "meta");
     if (d) {
-        // TODO remove this line
-        console.log("Meta received", d.meta);
+        // DEBUG console.log("Meta received", d.meta);
         setMeta(d.meta);
         setState(d.meta.initialState);
         // notify ready (Use parent.postmessage)
@@ -121,7 +120,7 @@ export default class Adapter<
                         else newState = { ...getState(), ...e.data.state };
                     } else newState = e.data.state;
                     setState(newState);
-                    console.log("Received state_push", this.id, "New state:", this.state);
+                    // DEBUG console.log("Received state_push", this.id, "New state:", this.state);
                     this.emitEvent("state_push", e.data.state);
                     break;
                 case "operation":
@@ -180,7 +179,7 @@ export default class Adapter<
             if (onStart) onStart.apply(this, [this]);
             return this;
         }
-        
+
         return new Promise((resolve, reject) => {
             let resolved = false;
 
@@ -244,19 +243,19 @@ export default class Adapter<
     }
 
     async pushState(newState: S | undefined, options?: AdapterPushStateOptions) {
-        console.log("pushState", this.id, newState);
+        // DEBUG console.log("pushState", this.id, newState);
 
-        if (options?.populate !== false)
-            postToParent(
-                "state_populate",
-                {
-                    state: newState,
-                    /* Set props explicitly to prevent unwanted data from being trandsfered */
-                    options: { merge: !options?.merge },
-                    __token: this.meta.authToken,
-                },
-                this.init.provider
-            );
+        postToParent(
+            "state_populate",
+            {
+                state: newState,
+                /* Set props explicitly to prevent unwanted data from being trandsfered */
+                options: { merge: !options?.merge, populate: options?.populate !== false },
+                __token: this.meta.authToken,
+            },
+            this.init.provider
+        );
+
         setState(newState);
     }
 

@@ -18,6 +18,8 @@ to power external extensions safely in your App via Web Workers and IFrames dire
 
 **Provider**
 
+`https://example.com`
+
 _index.js_
 
 ```ts
@@ -41,7 +43,7 @@ const providerApi = {
 
 const module = await extension.launchModule("modules/module.js", providerApi, {
     // Deactivated by default
-    allowPopulateCache: (state, oldState) => true, // or return new state
+    allowPopulateState: (state, oldState) => true, // or return new state
 });
 
 document.getElementById("echo_btn").onclick=()=>{
@@ -57,15 +59,16 @@ document.getElementById("print_btn").onclick=()=>{
 
 // `launchComponent` returns the same type as `launchModule`
 const module = await extension.launchComponent("components/component.html", providerApi, {
-    allowPopulateCache: () => true,
+    allowPopulateState: () => true,
 });
 
 setInterval(async ()=>{
     const newCounter = await module.execute("increment");
-    console.log("module confirmed new counter", newCounter)
+    console.log("Module confirmed new counter:", newCounter)
 }, 1000)
 
 document.getElementById("change_increment_by_btn").onclick= () => {
+    // push state from provider
     module.pushState({ incrementBy: 2 })
 }
 ```
@@ -127,7 +130,7 @@ _\<github_or_npm\>/components/component.html_
             });
 
             document.getElementById("change_increment").onclick = () => {
-                // Push state inside of a component/module
+                // Push state from a component/module
                 adapter.pushState(
                     { incrementBy: 5 },
                     {
@@ -143,7 +146,6 @@ _\<github_or_npm\>/components/component.html_
     <p id="counter"></p>
     <p>Incrementing by <span id="increment">1</span></p>
     <button id="reset">Reset</button>
-    <button id="change_increment_by_btn">Reset</button>
 </div>
 ```
 
@@ -177,4 +179,26 @@ new Adapter<ProviderInterface, ModuleInterface, ModleState>(...).start(...)
 ```ts
 const response = await provider.loadFile("path/to/file");
 const response = await adapter.loadFile("path/to/file");
+```
+
+## pushState
+
+```ts
+// -- Provider
+
+// Extension level
+await extension.pushState(
+    { activeTab: "files" },
+    {
+        // default: All modules/components
+        filter: {
+            check: module => module.meta.path.startsWith("toolbar/"),
+        },
+        merge: true, // default: true
+    }
+);
+// Module Level
+await module.pushState({
+    activeTab:
+});
 ```

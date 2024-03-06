@@ -19,17 +19,31 @@ type ModuleInit<O extends object, I extends object, S extends object = {}> = {
     operationTimeout?: number;
     initialState?: S;
     /**
-     * Allows adapters to pushstates to the provider. The provider the populates the state
+     * Allows adapters to push states to the provider. The provider then populates the state.
+     *
+     * If a given callback modifies the state and _merge_ is true it should return a partial state, otherwise the whole modified state.
+     * For merge pushes, the allowed state, modified or not, is merged with `ModuleInit.mergeStates` or the dafault merge,
+     * to create the new state.
+     *
      * @default false
      */
-    allowPopulateState?: ((state: Partial<S> | undefined, merge?: boolean) => boolean) | boolean;
+    allowPopulateState?: ((state: Partial<S> | undefined, merge: boolean) => boolean | Partial<S>) | boolean;
+    /**
+     * Customize how states are merged
+     * @default { ...oldState, ...newState }
+     */
     mergeStates?: (oldState: Partial<S> | undefined, newState: Partial<S> | undefined) => Partial<S>;
 };
 
 type ModuleEvents<I extends object> = {
-    state_populate: { /** New state */ state: any; options: any };
+    state_populate: {
+        /** New state */
+        state: object;
+        options: any;
+    };
     load: undefined;
     destroy: undefined;
+    error: Error;
 } & OperationEvents<I>;
 
 export type ModulePushStateOptions = {
@@ -78,24 +92,35 @@ export class Module<O extends object, I extends object, S extends object = {}> e
 
                         if (this.init.allowPopulateState) {
                             const merge = !!e.data.options?.merge;
+                            let receivedState = e.data.state;
+
+                            if (!receivedState || typeof receivedState !== "object") {
+                                return this.err("Invalid state", e);
+                            }
 
                             const allowed =
                                 this.init.allowPopulateState === true ||
-                                this.init.allowPopulateState(e.data.state, merge);
+                                this.init.allowPopulateState?.(receivedState, merge);
 
                             if (!allowed) return;
 
+                            // state allowed but modified
+                            if (typeof allowed === "object") receivedState = allowed;
+
                             if (merge) {
                                 if (this.init.mergeStates)
-                                    newState = this.init.mergeStates(this.state, e.data.state);
-                                else newState = { ...this.state, ...e.data.state };
-                            } else newState = e.data.state;
+                                    newState = this.init.mergeStates(this.state, receivedState);
+                                else newState = { ...this.state, ...receivedState };
+                            } else newState = receivedState;
                         } else return;
 
+                        // The state gets populated to every module with this path but this one if e.data.options.populate !== false
+                        // So we set the state of this module here. For the other modules its set in pushState
                         this._state = newState;
+
                         this.emitEvent("state_populate", {
                             state: newState,
-                            options: e.data.options,
+                            options: e.data.options || {},
                         } as any);
                         break;
                     case "operation":
@@ -105,6 +130,7 @@ export class Module<O extends object, I extends object, S extends object = {}> e
 
                         let op: any = await (this.init.out as any)?.[operation];
                         if (typeof op !== "function") op = null;
+
                         (port as MessagePort).onmessageerror = e => {
                             this.err("Operation Channel Error", e);
                         };
@@ -178,7 +204,7 @@ export class Module<O extends object, I extends object, S extends object = {}> e
         });
     }
 
-    private _state: S | undefined;
+    private _state: Partial<S> | undefined;
 
     get state() {
         return this._state;
@@ -188,7 +214,7 @@ export class Module<O extends object, I extends object, S extends object = {}> e
         return this.init.meta;
     }
 
-    protected err(info: string, event: Event | unknown) {
+    private err(info: string, event: Event | unknown) {
         const msg =
             event instanceof Event
                 ? ((event as any).message || (event as any).data || "").toString()
@@ -196,11 +222,12 @@ export class Module<O extends object, I extends object, S extends object = {}> e
                 ? event.message
                 : "";
         const err = new Error(`${info}${msg ? ": " + msg : ""}`);
-        console.error(info, err);
+        if (this.logs) console.error(info, err);
+        this.emitEvent("error", err as any);
         return err;
     }
 
-    protected postMessage(type: string, data: object, transfer?: Transferable[]) {
+    private postMessage(type: string, data: object, transfer?: Transferable[]) {
         this.init.target.postMessage({ ...data, __type: type }, { transfer, targetOrigin: this.init.origin });
     }
 
@@ -221,7 +248,7 @@ export class Module<O extends object, I extends object, S extends object = {}> e
     async pushState(newState: Partial<S>, options?: ModulePushStateOptions) {
         let s: Partial<S>;
 
-        if (options?.merge) {
+        if (options?.merge ?? false) {
             if (this.init.mergeStates) {
                 s = this.init.mergeStates(this.state, newState);
             } else {
@@ -232,6 +259,8 @@ export class Module<O extends object, I extends object, S extends object = {}> e
         this.postMessage("state_push", {
             state: s,
         });
+
+        this._state = s;
 
         return s;
     }

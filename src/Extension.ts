@@ -39,10 +39,16 @@ export interface PackageJSON {
 }
 
 interface ExtensionEvents extends OperationEvents<any> {
-    state_populate: { module: Module<any, any, any>; state: any; options: any };
+    state_populate: {
+        module: Module<any, any, any>;
+        state: any;
+        options: any;
+        result: ModuleActions;
+    };
     module_load: Module<any, any, any>;
     module_destroy: Module<any, any, any>;
     destroy: undefined;
+    error: { error: Error; origin?: Module<any, any, any> };
 }
 
 /** (id _or_ path _or_ check) _and_ !(notPath _or_ notId)  */
@@ -56,17 +62,29 @@ type ModuleFilter = {
 
 interface ExtensionPushStateOptions {
     filter?: ModuleFilter;
-    /** overwrite old states instead of merging */
-    overwrite?: boolean;
+    /**
+     * @default true
+     */
+    merge?: boolean;
 }
 
-type ModuleCache = { instances: Map<string, Module<any, any, any>>; sharedState: any };
+type ModuleCache = { instances: Map<string, Module<any, any, any>>; state: any };
 
 interface LaunchModuleOptions<S extends object> {
-    allowPopulateState?: ((state: Partial<S> | undefined, merge?: boolean) => boolean) | boolean;
+    allowPopulateState?:
+        | ((state: Partial<S> | undefined, merge: boolean, module: Module<any, any, any>) => boolean)
+        | boolean;
     meta?: MetaExtension;
+    /** @default populated state */
     initialState?: S;
 }
+
+type ModuleActions<T = void> = {
+    result: Awaited<T>[];
+    affected: Module<any, any, any>[];
+    errors: unknown[];
+    failed: Module<any, any, any>[];
+};
 
 export class Extension extends EventsHandler<ExtensionEvents> {
     readonly url: string = "";
@@ -74,9 +92,11 @@ export class Extension extends EventsHandler<ExtensionEvents> {
     private started = false;
     /** `<path, { instances: <Module, data>, sharedState: any }>` */
     private cache = new Map<string, ModuleCache>();
+    private logs: boolean;
 
     constructor(readonly provider: Provider, private init: ExtensionInit) {
         super();
+        this.logs = !!provider.options?.logs;
     }
 
     async start() {
@@ -116,7 +136,7 @@ export class Extension extends EventsHandler<ExtensionEvents> {
         options?: LaunchModuleOptions<S>
     ): Promise<Module<O, I, S>> {
         path = relPath(path || "");
-        // IMP use correct npm version for the newest wroker build (extensionrunner@version)
+        // IMP use correct npm version for the newest worker build (extensionrunner@version)
         const corsWorker = new CorsWorker(jsdelivr + "/npm/extensionrunner@1.0.33/worker.js", {
             type: "module",
             name: `${this.init.name}:${path}`,
@@ -195,7 +215,7 @@ export class Extension extends EventsHandler<ExtensionEvents> {
             authToken: randomId(),
             name: this.init.name,
             path,
-            initialState: this.cache.get(path)?.sharedState,
+            initialState: this.cache.get(path)?.state,
             version: this.init.version,
             type: this.init.type,
         };
@@ -207,14 +227,19 @@ export class Extension extends EventsHandler<ExtensionEvents> {
 
         // create module
 
-        const mod = new Module<O, I, S>(this, {
+        const populateState = options.allowPopulateState ?? false;
+
+        const mod: Module<O, I, S> = new Module<O, I, S>(this, {
             origin,
             target,
             meta: meta,
             out,
             operationTimeout: this.init.operationTimeout,
             connectionTimeout: this.init.connectionTimeout,
-            allowPopulateState: options.allowPopulateState,
+            allowPopulateState:
+                typeof populateState === "boolean"
+                    ? populateState
+                    : (newState, merge) => populateState(newState, merge, mod),
         });
 
         // propagate events
@@ -223,13 +248,18 @@ export class Extension extends EventsHandler<ExtensionEvents> {
             if (ev.type.startsWith("op:")) this.emitEvent(ev.type as any, ev.payload as any);
         });
 
-        mod.addEventListener("state_populate", ev => {
-            if (this.cache.has(path)) this.cache.get(path)!.sharedState = ev.payload;
-            this.pushState(ev.payload.state, { filter: { notId: mod.id, path: mod.meta.path } });
+        mod.addEventListener("state_populate", async ev => {
+            if (ev.payload.options?.populate === false) return;
+
+            if (this.cache.has(path)) this.cache.get(path)!.state = ev.payload;
+            const pushResults = await this.pushState(ev.payload.state, {
+                filter: { notId: mod.id, path: mod.meta.path },
+            });
             this.emitEvent("state_populate", {
                 module: mod,
                 state: ev.payload.state,
                 options: ev.payload.options,
+                result: pushResults,
             });
         });
 
@@ -238,12 +268,16 @@ export class Extension extends EventsHandler<ExtensionEvents> {
             this.emitEvent("module_destroy", mod);
         });
 
+        mod.addEventListener("error", ev => {
+            this.emitEvent("error", { error: ev.payload, origin: mod });
+        });
+
         // cache
 
         let instances = this.cache.get(path)?.instances;
         if (!instances) {
             instances = new Map();
-            this.cache.set(path, { instances, sharedState: undefined });
+            this.cache.set(path, { instances, state: undefined });
         }
         instances.set(mod.id, mod);
 
@@ -269,18 +303,76 @@ export class Extension extends EventsHandler<ExtensionEvents> {
         return await loadFile(this.init.type, this.init.name, this.init.version, path);
     }
 
-    pushState(newState: any, options?: ExtensionPushStateOptions) {
-        const modules = options?.filter ? this.filterModules(options?.filter || {}) : this.getAllModules();
-        for (const module of modules) {
-            module.pushState(newState, { merge: !options?.overwrite });
-        }
+    async pushState(newState: any, options?: ExtensionPushStateOptions): Promise<ModuleActions> {
+        return await this.forEachModule(
+            module => {
+                module.pushState(newState, { merge: options?.merge ?? true });
+            },
+            {
+                parallel: true,
+            }
+        );
     }
 
-    destroy() {
-        const all = this.getAllModules();
-        all.forEach(module => module.destroy());
+    async forEachModule<T>(
+        callback: (module: Module<any, any, any>) => T,
+        options?: { filter?: ModuleFilter; parallel?: boolean }
+    ): Promise<ModuleActions<T>> {
+        const result: ModuleActions<T> = { failed: [], affected: [], result: [], errors: [] };
+        const modules = options?.filter ? this.filterModules(options.filter) : this.getAllModules();
+
+        if (options?.parallel) {
+            const par: { error: unknown | null; result: any; module: Module<any, any, any> }[] =
+                await Promise.all(
+                    modules.map(async module => {
+                        try {
+                            return { error: null, result: await callback(module), module };
+                        } catch (err) {
+                            return { error: err, result: undefined, module };
+                        }
+                    })
+                );
+            par.forEach(p => {
+                if (p.error) {
+                    result.failed.push(p.module);
+                    result.errors.push(p.error);
+                } else {
+                    result.affected.push(p.module);
+                    result.result.push(p.result);
+                }
+            });
+        } else {
+            for (const module of modules) {
+                try {
+                    result.result.push(await callback(module));
+                    result.affected.push(module);
+                } catch (err) {
+                    result.failed.push(module);
+                    result.errors.push(err);
+                }
+            }
+        }
+        return result;
+    }
+
+    async destroy() {
+        const actions = await this.forEachModule(module => module.destroy());
         this.cache.clear();
         this.clearListeners();
         this.emitEvent("destroy", undefined);
+        return actions;
+    }
+
+    private err(info: string, event: any) {
+        const msg =
+            event instanceof Event
+                ? ((event as any).message || (event as any).data || "").toString()
+                : event instanceof Error
+                ? event.message
+                : "";
+        const err = new Error(`${info}${msg ? ": " + msg : ""}`);
+        if (this.logs) console.error(info, err);
+        this.emitEvent("error", err as any);
+        return err;
     }
 }

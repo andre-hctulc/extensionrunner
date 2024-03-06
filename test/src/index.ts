@@ -8,7 +8,7 @@ import type {
 } from "../../test-extension/src/frames/counter/counter.js";
 
 /** Commit sha of test extension */
-const commitSha = "da64178aa28b66db02ca2c7bce3d3e4a35d02ad6";
+const commitSha = "19229d109f2b538292e78f319dd06b5062523c6d";
 
 main().catch(err => console.error(err));
 
