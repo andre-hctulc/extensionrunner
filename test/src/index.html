@@ -2,7 +2,7 @@
 <html>
     <head>
         <title>Test web-extension</title>
-        <script src="index.js" type="module"></script>
+        <script src="index.ts" type="module"></script>
     </head>
     <body>
         <h1>Test</h1>
@@ -10,10 +10,10 @@
         <p id="info"></p>
         <h2>Module (dist/math.js)</h2>
         <button id="operation">Operation (add and substract)</button>
-        <button id="state">Push state</button>
-        <button id="event">Emit Event (shape_change)</button>
         <h2>IFrame (dist/frames/counter/index.html)</h2>
         <button id="increment">Counter increment</button>
         <div id="iframe"></div>
+        <div id="iframe2"></div>
+        <button id="reset">Reset counter (frame1)</button>
     </body>
 </html>

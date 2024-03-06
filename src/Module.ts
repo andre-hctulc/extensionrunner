@@ -1,11 +1,9 @@
-import type { Extension } from "./Extension.js";
-import { receiveData } from "./shared.js";
-import { EventType, Meta, Operation, OperationArgs, OperationName, Operations } from "./types.js";
+import { EventsHandler } from "./EventsHandler.js";
+import { Extension } from "./Extension.js";
+import { randomId, receiveData } from "./shared.js";
+import type { Meta, OperationArgs, OperationEvents, OperationName, Operations } from "./types.js";
 
-export interface ModuleOptions<I extends Operations<Module<I, O, S>>, O extends Operations<Module<I, O, S>>, S = any> {
-    onError?: (err: Error) => void;
-    onPushState?: (newState: S, populate: boolean) => void;
-    onEvent?: (type: EventType<I>, payload: OperationArgs<I, `event_${EventType<I>}`>) => void;
+export interface ModuleOptions<O extends object, I extends object, S extends object = {}> {
     /**
      * Max time to wait for ready
      * @default 5000
@@ -18,22 +16,34 @@ export interface ModuleOptions<I extends Operations<Module<I, O, S>>, O extends 
     initialState?: S;
 }
 
-/** Represents an iframe or a worker */
-export class Module<I extends Operations<Module<I, O, S>>, O extends Operations<Module<I, O, S>>, S = any> {
-    private logs: boolean;
+type ModuleInit<O extends object, I extends object, S extends object = {}> = {
+    origin: string;
+    target: Window | Worker;
+    meta: Meta;
+    out: Operations<Module<O, I, S>, O>;
+};
 
-    constructor(
-        readonly extension: Extension,
-        readonly origin: string,
-        readonly target: Window | Worker,
-        readonly meta: Meta,
-        private out: O,
-        protected options: ModuleOptions<I, O, S>
-    ) {
+type ModuleEvents<I extends object> = {
+    state_populate: { state: any; options: any };
+    load: undefined;
+    destroy: undefined;
+} & OperationEvents<I>;
+
+export type ModulePushStateOptions = {
+    /** @default false */
+    merge?: boolean;
+};
+
+/** Represents an iframe or a worker */
+export class Module<O extends object, I extends object, S extends object = {}> extends EventsHandler<ModuleEvents<I>> {
+    private logs: boolean;
+    readonly id = randomId();
+
+    constructor(readonly extension: Extension, private init: ModuleInit<O, I, S>, protected options: ModuleOptions<O, I, S>) {
+        super();
         this.logs = !!this.extension.provider.options?.logs;
     }
 
-    private inited = false;
     private started = false;
 
     async start(): Promise<this> {
@@ -58,55 +68,41 @@ export class Module<I extends Operations<Module<I, O, S>>, O extends Operations<
                 const type = e.data.__type;
 
                 switch (type) {
-                    case "state_push":
+                    case "state_populate":
                         this._state = e.data.state;
-                        this.options.onPushState?.(e.data.state, !!e.data.populate);
-                        break;
-                    case "event":
-                        this.options.onEvent?.(e.data.event, e.data.args);
+                        this.emitEvent("state_populate", { state: e.data.state, options: e.data.options } as any);
                         break;
                     case "operation":
                         const { args, operation, __port: port } = e.data;
 
                         if (!port) return this.err("Operation Channel Error", "Port not found");
 
-                        const op = await this.out[operation];
-                        if (typeof op !== "function") return this.err("Operation not found", null);
+                        let op: any = await (this.init.out as any)?.[operation];
+                        if (typeof op !== "function") op = null;
 
                         (port as MessagePort).onmessageerror = e => {
                             this.err("Operation Channel Error", e);
                         };
 
-                        try {
-                            const result = await op.apply(this, args);
-                            (port as MessagePort).postMessage({ __type: "operation:result", payload: result });
-                        } catch (err) {
-                            return this.err("Operation Execution Error", err);
+                        if (op) {
+                            try {
+                                const result = await op.apply(this, args);
+                                (port as MessagePort).postMessage({ __type: "operation:result", payload: result });
+                                this.emitEvent(`op:${operation}`, { args, result, error: null } as any);
+                            } catch (err) {
+                                const e = this.err("Operation Execution Error", err);
+                                this.emitEvent(`op:${operation}`, { args, result: undefined, error: e } as any);
+                                return;
+                            }
+                        } else {
+                            this.emitEvent(`op:${operation}`, { args, result: undefined, error: null } as any);
                         }
 
                         break;
                     case "ready":
+                        if (!resolved) resolve(this);
+                        this.emitEvent("load", undefined as any);
                         resolved = true;
-
-                        // init events once
-                        if (!this.inited) {
-                            this.inited = true;
-
-                            // init postMessage (received by worker.ts or iframe)
-                            const events = new MessageChannel();
-                            const eventsIn = events.port1;
-                            const eventsOut = events.port2;
-
-                            eventsIn.onmessageerror = e => {
-                                this.err("Events Channel (in) Error", e);
-                            };
-
-                            eventsOut.onmessageerror = e => {
-                                this.err("Events Channel (out) Error", e);
-                            };
-                            resolve(this);
-                        }
-
                         break;
                 }
             };
@@ -118,9 +114,9 @@ export class Module<I extends Operations<Module<I, O, S>>, O extends Operations<
             */
 
             // Worker
-            if (this.target instanceof Worker) {
+            if (this.init.target instanceof Worker) {
                 if (this.logs) console.log("Listening on worker for messages");
-                this.target.addEventListener("message", messagesListener);
+                this.init.target.addEventListener("message", messagesListener);
             }
             // IFrame
             else {
@@ -131,7 +127,7 @@ export class Module<I extends Operations<Module<I, O, S>>, O extends Operations<
             // Post meta:
             // - Workers need this to import the module in the worker initialization, whoich dynamically imports the module
             // - Iframes need this to init their meta
-            this.target.postMessage({ __type: "meta", meta: this.meta }, { targetOrigin: "*" }); // TODO targetOrigin
+            this.init.target.postMessage({ __type: "meta", meta: this.init.meta }, { targetOrigin: "*" }); // TODO targetOrigin
 
             setTimeout(() => {
                 if (!resolved) reject(this.err("Connection timeout", null));
@@ -145,29 +141,42 @@ export class Module<I extends Operations<Module<I, O, S>>, O extends Operations<
         return this._state;
     }
 
+    get meta() {
+        return this.init.meta;
+    }
+
     protected err(info: string, event: Event | unknown) {
         const msg =
             event instanceof Event ? ((event as any).message || (event as any).data || "").toString() : event instanceof Error ? event.message : "";
         const err = new Error(`${info}${msg ? ": " + msg : ""}`);
-        this.options?.onError?.(err);
         console.error(info, err);
         return err;
     }
 
     protected postMessage(type: string, data: object, transfer?: Transferable[]) {
-        this.target.postMessage({ ...data, __type: type }, { transfer });
+        this.init.target.postMessage({ ...data, __type: type }, { transfer });
     }
 
-    async execute<T extends OperationName<O>>(operation: T, ...args: OperationArgs<O, T>): Promise<OperationArgs<O, T>> {
+    async execute<T extends OperationName<I>>(operation: T, ...args: OperationArgs<I, T>): Promise<OperationArgs<I, T>> {
         // TODO "*" origin
-        return await receiveData(this.target, "operation", { args, operation }, "*", [], this.options.operationTimeout);
+        return await receiveData(this.init.target, "operation", { args, operation }, "*", [], this.options.operationTimeout);
     }
 
-    async emitEvent<T extends EventType<I>>(type: T, payload?: OperationArgs<I, `event_${T}`>) {
-        this.postMessage("event", { event: type, args: payload });
+    async pushState(newState: S | undefined, options?: ModulePushStateOptions) {
+        this.postMessage("state_push", {
+            state: newState,
+            /* Set explicitly to prevent unwanted data from being trandsfered */
+            options: { merge: !!options?.merge },
+        });
     }
 
-    async pushState(newState: S | undefined) {
-        this.postMessage("state_push", { state: newState });
+    destroy() {
+        if (this.init.target instanceof Worker) {
+            try {
+                this.init.target.terminate();
+            } catch (err) {}
+        }
+        this.clearListeners();
+        this.emitEvent("destroy", undefined as any);
     }
 }

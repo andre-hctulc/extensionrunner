@@ -2,27 +2,9 @@
 <html>
     <head>
         <title>Test web-extension</title>
-        <script>/*
- * ATTENTION: The "eval" devtool has been used (maybe by default in mode: "development").
- * This devtool is neither made for production nor for readable output files.
- * It uses "eval()" calls to create a separate source file in the browser devtools.
- * If you are trying to read the output file, select a different devtool (https://webpack.js.org/configuration/devtool/)
- * or disable the default devtool with "devtool: false".
- * If you are looking for production-ready output files, see mode: "production" (https://webpack.js.org/configuration/mode/).
- */
-/******/ (() => { // webpackBootstrap
+        <script>/******/ (() => { // webpackBootstrap
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
-
-/***/ "./src/index.js":
-/*!**********************!*\
-  !*** ./src/index.js ***!
-  \**********************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _index_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../index.js */ \"../index.js\");\n\n\nmain().catch(err => console.error(err));\n\n// https://cdn.jsdelivr.net/npm/extensionrunner/worker.js\nasync function main() {\n    addEventListener(\"message\", e => {\n        console.log(\"Message received ::\", e.data);\n    });\n\n    const prov = new _index_js__WEBPACK_IMPORTED_MODULE_0__[\"default\"]({ logs: true });\n    const commitSha = \"68df0ddaffe60addcc97ffc3bd045ee1016e4231\";\n    const extension = await prov.loadExtension({\n        type: \"github\",\n        name: \"andre-hctulc/extensionrunner-test-extension\",\n        version: commitSha,\n        out: {\n            echo: text => alert(text + \" ... \" + text + \" .. . .    .\" + text),\n        },\n        onStatePush: (newState, module) => {\n            alert(\"State Push received:\", newState);\n        },\n    });\n\n    console.log(\"Extension loaded:\", extension);\n\n    const info = document.getElementById(\"info\");\n    info.innerHTML = `Test-Extension loaded: ${extension.pkg.name}@${extension.pkg.version} SHA ${commitSha}`;\n\n    // pushState\n\n    const stateBtn = document.getElementById(\"state\");\n\n    let counter = 0;\n\n    stateBtn.onclick = () => {\n        extension.pushState({ message: \"Counter: \" + ++counter });\n    };\n\n    // launch\n\n    //launchModule(extension).catch(err => console.error(\"Error launching module\", err));\n    launchIFrame(extension).catch(err => console.error(\"Error launching iframe\", err));\n}\n\nasync function launchModule(extension) {\n    const module = await extension.launchModule(\"dist/math.js\");\n\n    console.log(\"Module loaded:\", extension);\n\n    // module operations\n\n    const eventBtn = document.getElementById(\"event\");\n    const operationBtn = document.getElementById(\"operation\");\n\n    eventBtn.onclick = () => {\n        extension.emitEvent(\"greet\", \"Hello world!\");\n    };\n\n    operationBtn.onclick = async () => {\n        if (!module) return alert(\"Module not loaded\");\n        const sum = await module.execute(\"add\", 1, 5);\n        const d = await module.execute(\"substract\", 10, 2);\n        alert(\"Sum: \" + sum + \" Sub: \" + d);\n    };\n}\n\nasync function launchIFrame(extension) {\n    // iframe\n\n    const container = document.getElementById(\"iframe\");\n    const incrementBtn = document.getElementById(\"increment\");\n\n    if (container) {\n        const iframeModule = await extension.launchIFrame(container, \"dist/frames/counter/index.html\", {\n            echo: text => alert(`Echo received from Iframe: ${text}`),\n        });\n\n        if (incrementBtn) {\n            incrementBtn.onclick = () => {\n                iframeModule.emitEvent(\"increment\", {});\n            };\n        }\n    }\n}\n\n\n//# sourceURL=webpack://test/./src/index.js?");
-
-/***/ }),
 
 /***/ "../CorsWorker.js":
 /*!************************!*\
@@ -30,7 +12,121 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _ind
   \************************/
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   CorsWorker: () => (/* binding */ CorsWorker)\n/* harmony export */ });\n/*\nSource: https://github.com/webpack/webpack/discussions/14648\n\nBrowsers do not support CORS for web workers (but they should?). This is a workaround to load a script from a different origin.\n*/\nclass CorsWorker {\n    constructor(url, options) {\n        this.url = url;\n        this.options = options;\n        this.inited = false;\n    }\n    async init() {\n        if (this.inited)\n            return this;\n        this.inited = true;\n        try {\n            const response = await fetch(this.url);\n            if (!response.ok)\n                throw new Error();\n            const text = await response.text();\n            const objectURL = URL.createObjectURL(new Blob([text], {\n                type: \"application/javascript\",\n            }));\n            this._worker = new Worker(objectURL, { type: this.options?.type, name: this.options?.name });\n        }\n        catch (err) {\n            throw new Error(\"Failed to create worker\");\n        }\n        return this;\n    }\n    get worker() {\n        if (!this._worker)\n            throw new Error(\"CorsWorker did not start properly\");\n        return this._worker;\n    }\n}\n\n\n//# sourceURL=webpack://test/../CorsWorker.js?");
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   CorsWorker: () => (/* binding */ CorsWorker)
+/* harmony export */ });
+/*
+Source: https://github.com/webpack/webpack/discussions/14648
+
+Browsers do not support CORS for web workers (but they should?). This is a workaround to load a script from a different origin.
+*/
+class CorsWorker {
+    constructor(url, options) {
+        this.url = url;
+        this.options = options;
+        this.inited = false;
+    }
+    async init() {
+        if (this.inited)
+            return this;
+        this.inited = true;
+        try {
+            const response = await fetch(this.url);
+            if (!response.ok)
+                throw new Error();
+            const text = await response.text();
+            const objectURL = URL.createObjectURL(new Blob([text], {
+                type: "application/javascript",
+            }));
+            this._worker = new Worker(objectURL, { type: this.options?.type, name: this.options?.name });
+        }
+        catch (err) {
+            throw new Error("Failed to create worker");
+        }
+        return this;
+    }
+    get worker() {
+        if (!this._worker)
+            throw new Error("CorsWorker did not start properly");
+        return this._worker;
+    }
+}
+
+
+/***/ }),
+
+/***/ "../EventsHandler.js":
+/*!***************************!*\
+  !*** ../EventsHandler.js ***!
+  \***************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Event: () => (/* binding */ Event),
+/* harmony export */   EventsHandler: () => (/* binding */ EventsHandler)
+/* harmony export */ });
+var __classPrivateFieldSet = (undefined && undefined.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+};
+var __classPrivateFieldGet = (undefined && undefined.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+};
+var _Event_defaultPrevented, _EventsHandler_listeners, _EventsHandler_globalListeners;
+class Event {
+    constructor(type, payload) {
+        this.type = type;
+        this.payload = payload;
+        _Event_defaultPrevented.set(this, false);
+    }
+    preventDefault() {
+        __classPrivateFieldSet(this, _Event_defaultPrevented, true, "f");
+    }
+    get defaultPrevented() {
+        return __classPrivateFieldGet(this, _Event_defaultPrevented, "f");
+    }
+}
+_Event_defaultPrevented = new WeakMap();
+class EventsHandler {
+    constructor() {
+        _EventsHandler_listeners.set(this, new Map());
+        _EventsHandler_globalListeners.set(this, new Set());
+    }
+    addEventListener(type, listener) {
+        if (!type)
+            __classPrivateFieldGet(this, _EventsHandler_globalListeners, "f").add(listener);
+        else {
+            if (!__classPrivateFieldGet(this, _EventsHandler_listeners, "f").has(type))
+                __classPrivateFieldGet(this, _EventsHandler_listeners, "f").set(type, new Set());
+            __classPrivateFieldGet(this, _EventsHandler_listeners, "f").get(type)?.add(listener);
+        }
+        return listener;
+    }
+    removeEventListener(type, listener) {
+        if (type === null)
+            __classPrivateFieldGet(this, _EventsHandler_globalListeners, "f").delete(listener);
+        else
+            __classPrivateFieldGet(this, _EventsHandler_listeners, "f").get(type)?.delete(listener);
+    }
+    emitEvent(type, payload) {
+        const ev = new Event(type, payload);
+        __classPrivateFieldGet(this, _EventsHandler_listeners, "f").get(type)?.forEach(listener => listener(ev));
+        __classPrivateFieldGet(this, _EventsHandler_globalListeners, "f").forEach(listener => listener(ev));
+        return ev;
+    }
+    clearListeners() {
+        __classPrivateFieldGet(this, _EventsHandler_globalListeners, "f").clear();
+        __classPrivateFieldGet(this, _EventsHandler_listeners, "f").clear();
+    }
+}
+_EventsHandler_listeners = new WeakMap(), _EventsHandler_globalListeners = new WeakMap();
+
 
 /***/ }),
 
@@ -40,7 +136,208 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
   \***********************/
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   Extension: () => (/* binding */ Extension)\n/* harmony export */ });\n/* harmony import */ var _CorsWorker_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./CorsWorker.js */ \"../CorsWorker.js\");\n/* harmony import */ var _Module_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Module.js */ \"../Module.js\");\n/* harmony import */ var _shared_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./shared.js */ \"../shared.js\");\n\n\n\nconst jsdelivr = \"https://cdn.jsdelivr.net\";\nclass Extension extends _shared_js__WEBPACK_IMPORTED_MODULE_2__.Events {\n    constructor(provider, init) {\n        super();\n        this.provider = provider;\n        this.init = init;\n        this.url = \"\";\n        this._pkg = {};\n        this.started = false;\n        /** `<module_id, { instances: <Module, data>, sharedState: any }>` */\n        this.cache = new Map();\n        if (this.type === \"github\") {\n            const [owner, repo] = this.init.name.split(\"/\");\n            this.url = `${jsdelivr}/gh/${owner}/${repo}@${init.version}/`;\n        }\n        else if (this.type === \"npm\") {\n            this.url = `${jsdelivr}/npm/${init.name}@${init.version}/`;\n        }\n        else\n            throw new Error(\"Invalid type ('npm' or 'github' expected)\");\n    }\n    async start() {\n        if (this.started)\n            return;\n        this.started = true;\n        // load meta (package.json)\n        const file = await this.loadFile(\"package.json\");\n        const text = await file.text();\n        this._pkg = JSON.parse(text);\n    }\n    /**\n     * @param path Use _null_ or empty string for the packages entry file\n     */\n    async launchModule(path, out, meta) {\n        path = (0,_shared_js__WEBPACK_IMPORTED_MODULE_2__.relPath)(path || \"\");\n        // TODO npm/extensiontunner@version/...  version not specified -> latest version is used\n        const corsWorker = new _CorsWorker_js__WEBPACK_IMPORTED_MODULE_0__.CorsWorker(jsdelivr + \"/npm/extensionrunner@1.0.29/worker.js\", { type: \"module\", name: `${this.init.name}:${path}` });\n        await corsWorker.init();\n        const mod = this.initModule(corsWorker.worker, jsdelivr, path, out, meta);\n        return mod.start();\n    }\n    async launchIFrame(parentElement, path, out, meta) {\n        path = (0,_shared_js__WEBPACK_IMPORTED_MODULE_2__.relPath)(path);\n        // Most CDNs do not directly serve html files, they serve the html as a string in a response. So does jsdelivr and unpkg.\n        // So we fetch the html and use ifrm.srcdoc to load the html\n        const iframe = document.createElement(\"iframe\");\n        let url;\n        let origin;\n        if (this.type === \"github\") {\n            const [owner, repo] = this.init.name.split(\"/\");\n            origin = \"https://raw.githack.com\";\n            url = `${origin}/${owner}/${repo}/${this.init.version}/${path}`;\n        }\n        else if (this.type === \"npm\") {\n            // TODO see Info.md CDNs\n            origin = \"https://unpkg.com\";\n            url = `${origin}/${this.init.name}@${this.init.version}/${path}`;\n        }\n        else\n            throw new Error(\"Invalid type ('npm' or 'github' expected)\");\n        iframe.src = url;\n        iframe.setAttribute(\"sandbox\", \"allow-scripts allow-same-origin\");\n        // TODOD more attrs?\n        // wait for load\n        return new Promise((resolve, reject) => {\n            iframe.onload = async (e) => {\n                if (!iframe.contentWindow)\n                    return reject(\"`contentWindow`ndow not defined\");\n                const mod = this.initModule(iframe.contentWindow, origin, path, out, meta);\n                resolve(mod.start());\n            };\n            iframe.addEventListener(\"error\", e => {\n                reject(new Error(e.message));\n            });\n            parentElement.appendChild(iframe);\n        });\n    }\n    initModule(target, origin, path, out, meta) {\n        // genrate random id\n        let _meta = {\n            authToken: (0,_shared_js__WEBPACK_IMPORTED_MODULE_2__.randomId)(),\n            name: this.init.name,\n            path,\n            state: this.cache.get(path)?.sharedState,\n            version: this.init.version,\n            type: this.init.type,\n        };\n        _meta = this.init.meta ? this.init.meta(_meta) : _meta;\n        if (meta)\n            _meta = meta(_meta);\n        // create module\n        const mod = new _Module_js__WEBPACK_IMPORTED_MODULE_1__.Module(this, origin, target, _meta, out, {\n            onPushState: (newState, populate) => {\n                if (populate)\n                    this.pushState(path, newState, undefined, [mod]);\n                this.init.onPushState?.(newState, mod);\n            },\n            onEvent: (type, payload) => {\n                this.notifyListeners?.(type, payload, mod);\n            },\n            operationTimeout: this.init.operationTimeout,\n            connectionTimeout: this.init.connectionTimeout,\n        });\n        // cache\n        let instances = this.cache.get(path)?.instances;\n        if (!instances) {\n            instances = new Map();\n            this.cache.set(path, { instances, sharedState: undefined });\n        }\n        instances.set(mod, { state: undefined });\n        return mod;\n    }\n    get id() {\n        return this.init.type + \"%\" + this.init.name;\n    }\n    get pkg() {\n        return this._pkg;\n    }\n    get type() {\n        return this.init.type;\n    }\n    getUrl(path, searchParams) {\n        if (searchParams && !searchParams.startsWith(\"?\"))\n            searchParams = \"?\" + searchParams;\n        return this.url + path + (searchParams || \"\");\n    }\n    /** If the response is not ok, the `Response` will be set on the thrown error (`Error.response`) */\n    async loadFile(path) {\n        if (path.startsWith(\"/\"))\n            path = path.slice(1);\n        else if (path.startsWith(\"./\"))\n            path = path.slice(2);\n        const response = await fetch(this.getUrl(path), this.type === \"github\" ? {} : {});\n        if (!response.ok) {\n            const error = new Error(`Failed to load file: ${response.statusText}`);\n            error.response = response;\n            throw new Error(`Failed to load file: ${response.statusText}`);\n        }\n        return response;\n    }\n    pushState(moduleId, newState, instance, exclude) {\n        const exclSet = new Set(exclude);\n        const cache = this.cache.get(moduleId);\n        if (cache) {\n            if (instance) {\n                if (!exclSet.has(instance))\n                    instance.pushState(newState);\n            }\n            else {\n                const modules = Array.from(cache.instances.keys());\n                modules.forEach(instance => {\n                    if (!exclSet.has(instance))\n                        instance.pushState(newState);\n                });\n            }\n        }\n    }\n    emitEvent(type, payload, filter) {\n        for (const moduleId of this.cache.keys()) {\n            const modules = Array.from(this.cache.get(moduleId)?.instances.keys() || []);\n            modules.forEach(instance => {\n                if (filter && !filter(moduleId, instance))\n                    return;\n                instance.emitEvent(type, payload);\n            });\n        }\n    }\n}\n\n\n//# sourceURL=webpack://test/../Extension.js?");
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Extension: () => (/* binding */ Extension)
+/* harmony export */ });
+/* harmony import */ var _CorsWorker_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./CorsWorker.js */ "../CorsWorker.js");
+/* harmony import */ var _Module_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Module.js */ "../Module.js");
+/* harmony import */ var _shared_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./shared.js */ "../shared.js");
+/* harmony import */ var _EventsHandler_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./EventsHandler.js */ "../EventsHandler.js");
+
+
+
+
+const jsdelivr = "https://cdn.jsdelivr.net";
+class Extension extends _EventsHandler_js__WEBPACK_IMPORTED_MODULE_3__.EventsHandler {
+    constructor(provider, init) {
+        super();
+        this.provider = provider;
+        this.init = init;
+        this.url = "";
+        this._pkg = {};
+        this.started = false;
+        /** `<path, { instances: <Module, data>, sharedState: any }>` */
+        this.cache = new Map();
+        if (this.type === "github") {
+            const [owner, repo] = this.init.name.split("/");
+            this.url = `${jsdelivr}/gh/${owner}/${repo}@${init.version}/`;
+        }
+        else if (this.type === "npm") {
+            this.url = `${jsdelivr}/npm/${init.name}@${init.version}/`;
+        }
+        else
+            throw new Error("Invalid type ('npm' or 'github' expected)");
+    }
+    async start() {
+        if (this.started)
+            return;
+        this.started = true;
+        // load meta (package.json)
+        const file = await this.loadFile("package.json");
+        const text = await file.text();
+        this._pkg = JSON.parse(text);
+    }
+    /** When the filter is empty no modules are returned */
+    filterModules(filter) {
+        const all = this.getAllModules();
+        const idsSet = new Set(Array.isArray(filter.id) ? filter.id : [filter.id]);
+        const notIdsSet = new Set(Array.isArray(filter.notId) ? filter.notId : [filter.notId]);
+        const pathsSet = new Set(Array.isArray(filter.path) ? filter.path : [filter.path]);
+        const notPathsSet = new Set(Array.isArray(filter.notPath) ? filter.notPath : [filter.notPath]);
+        return all.filter(module => {
+            let include = idsSet.has(module.id);
+            if (filter.notId && notIdsSet.has(module.id) && filter.and)
+                include = false;
+            if (filter.path && !pathsSet.has(module.meta.path) && filter.and)
+                include = false;
+            if (filter.notPath && notPathsSet.has(module.meta.path) && filter.and)
+                include = false;
+            if (filter.check && !(filter.and && !include)) {
+                if (filter.check(module))
+                    include = true;
+            }
+            return include;
+        });
+    }
+    getAllModules() {
+        return Array.from(this.cache.values()).flatMap(({ instances }) => Array.from(instances.values()));
+    }
+    /**
+     * @param path Use _null_ or empty string for the packages entry file
+     */
+    async launchModule(path, out, meta) {
+        path = (0,_shared_js__WEBPACK_IMPORTED_MODULE_2__.relPath)(path || "");
+        // IMP use correct npm version for the newest wroker build (extensionrunner@version)
+        const corsWorker = new _CorsWorker_js__WEBPACK_IMPORTED_MODULE_0__.CorsWorker(jsdelivr + "/npm/extensionrunner@1.0.29/worker.js", { type: "module", name: `${this.init.name}:${path}` });
+        await corsWorker.init();
+        const mod = this.initModule(corsWorker.worker, jsdelivr, path, out, meta);
+        return mod.start();
+    }
+    async launchComponent(parentElement, path, out, meta) {
+        path = (0,_shared_js__WEBPACK_IMPORTED_MODULE_2__.relPath)(path);
+        // Most CDNs do not directly serve html files, they serve the html as a string in a response. So does jsdelivr and unpkg.
+        // So we fetch the html and use ifrm.srcdoc to load the html
+        const iframe = document.createElement("iframe");
+        let url;
+        let origin;
+        if (this.type === "github") {
+            const [owner, repo] = this.init.name.split("/");
+            origin = "https://raw.githack.com";
+            url = `${origin}/${owner}/${repo}/${this.init.version}/${path}`;
+        }
+        else if (this.type === "npm") {
+            // TODO see Info.md CDNs
+            origin = "https://unpkg.com";
+            url = `${origin}/${this.init.name}@${this.init.version}/${path}`;
+        }
+        else
+            throw new Error("Invalid type ('npm' or 'github' expected)");
+        iframe.src = url;
+        iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
+        // TODOD more attrs?
+        // wait for load
+        return new Promise((resolve, reject) => {
+            iframe.onload = async (e) => {
+                if (!iframe.contentWindow)
+                    return reject("`contentWindow`ndow not defined");
+                const mod = this.initModule(iframe.contentWindow, origin, path, out, meta);
+                resolve(mod.start());
+            };
+            iframe.addEventListener("error", e => {
+                reject(new Error(e.message));
+            });
+            parentElement.appendChild(iframe);
+        });
+    }
+    initModule(target, origin, path, out, meta) {
+        // genrate random id
+        let _meta = {
+            authToken: (0,_shared_js__WEBPACK_IMPORTED_MODULE_2__.randomId)(),
+            name: this.init.name,
+            path,
+            initialState: this.cache.get(path)?.sharedState,
+            version: this.init.version,
+            type: this.init.type,
+        };
+        _meta = this.init.meta ? this.init.meta(_meta) : _meta;
+        if (meta)
+            _meta = meta(_meta);
+        // create module
+        const mod = new _Module_js__WEBPACK_IMPORTED_MODULE_1__.Module(this, { origin, target, meta: _meta, out }, {
+            operationTimeout: this.init.operationTimeout,
+            connectionTimeout: this.init.connectionTimeout,
+        });
+        // propagate events
+        mod.addEventListener(null, ev => {
+            if (ev.type.startsWith("op:"))
+                this.emitEvent(ev.type, ev.payload);
+        });
+        mod.addEventListener("state_populate", ev => {
+            if (this.cache.has(path))
+                this.cache.get(path).sharedState = ev.payload;
+            this.filterModules({ path, notId: mod.id }).forEach(module => {
+                module.pushState(ev.payload, { merge: true });
+            });
+            this.emitEvent("state_populate", { module: mod, state: ev.payload.state, options: ev.payload.options });
+        });
+        mod.addEventListener("destroy", () => {
+            this.cache.get(path)?.instances.delete(mod.id);
+            this.emitEvent("module_destroy", mod);
+        });
+        // cache
+        let instances = this.cache.get(path)?.instances;
+        if (!instances) {
+            instances = new Map();
+            this.cache.set(path, { instances, sharedState: undefined });
+        }
+        instances.set(mod.id, mod);
+        this.emitEvent("module_load", mod);
+        return mod;
+    }
+    get id() {
+        return this.init.type + "%" + this.init.name;
+    }
+    get pkg() {
+        return this._pkg;
+    }
+    get type() {
+        return this.init.type;
+    }
+    getUrl(path, searchParams) {
+        if (searchParams && !searchParams.startsWith("?"))
+            searchParams = "?" + searchParams;
+        return this.url + path + (searchParams || "");
+    }
+    /** If the response is not ok, the `Response` will be set on the thrown error (`Error.response`) */
+    async loadFile(path) {
+        if (path.startsWith("/"))
+            path = path.slice(1);
+        else if (path.startsWith("./"))
+            path = path.slice(2);
+        const response = await fetch(this.getUrl(path), this.type === "github" ? {} : {});
+        if (!response.ok) {
+            const error = new Error(`Failed to load file: ${response.statusText}`);
+            error.response = response;
+            throw new Error(`Failed to load file: ${response.statusText}`);
+        }
+        return response;
+    }
+    pushState(newState, options) {
+        const modules = options?.filter ? this.filterModules(options?.filter || {}) : this.getAllModules();
+        for (const module of modules) {
+            module.pushState(newState, { merge: !options?.overwrite });
+        }
+    }
+    destroy() {
+        const all = this.getAllModules();
+        all.forEach(module => module.destroy());
+        this.cache.clear();
+        this.clearListeners();
+        this.emitEvent("destroy", undefined);
+    }
+}
+
 
 /***/ }),
 
@@ -50,7 +347,145 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
   \********************/
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   Module: () => (/* binding */ Module)\n/* harmony export */ });\n/* harmony import */ var _shared_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./shared.js */ \"../shared.js\");\n\n/** Represents an iframe or a worker */\nclass Module {\n    constructor(extension, origin, target, meta, out, options) {\n        this.extension = extension;\n        this.origin = origin;\n        this.target = target;\n        this.meta = meta;\n        this.out = out;\n        this.options = options;\n        this.inited = false;\n        this.started = false;\n        this.logs = !!this.extension.provider.options?.logs;\n    }\n    async start() {\n        if (this.started)\n            return this;\n        this.started = true;\n        return new Promise((resolve, reject) => {\n            // In CORS context target is Window (iframe.contentWindow)\n            // We cant define target.onmessage or target.onerror on a cross origin Window\n            // Thats why we listen to the message event on the global object and check the source\n            let resolved = false;\n            const messagesListener = async (e) => {\n                // authenticate\n                // TODO if (e.origin !== this.origin) return;\n                // TODO if (e.data?.__token !== this.meta.authToken) return;\n                if (typeof e?.data?.__type !== \"string\")\n                    return;\n                const type = e.data.__type;\n                switch (type) {\n                    case \"state_push\":\n                        this._state = e.data.state;\n                        this.options.onPushState?.(e.data.state, !!e.data.populate);\n                        break;\n                    case \"event\":\n                        this.options.onEvent?.(e.data.event, e.data.args);\n                        break;\n                    case \"operation\":\n                        const { args, operation, __port: port } = e.data;\n                        if (!port)\n                            return this.err(\"Operation Channel Error\", \"Port not found\");\n                        const op = await this.out[operation];\n                        if (typeof op !== \"function\")\n                            return this.err(\"Operation not found\", null);\n                        port.onmessageerror = e => {\n                            this.err(\"Operation Channel Error\", e);\n                        };\n                        try {\n                            const result = await op(...args);\n                            port.postMessage({ __type: \"operation:result\", payload: result });\n                        }\n                        catch (err) {\n                            return this.err(\"Operation Execution Error\", err);\n                        }\n                        break;\n                    case \"ready\":\n                        resolved = true;\n                        // init events once\n                        if (!this.inited) {\n                            this.inited = true;\n                            // init postMessage (received by worker.ts or iframe)\n                            const events = new MessageChannel();\n                            const eventsIn = events.port1;\n                            const eventsOut = events.port2;\n                            eventsIn.onmessageerror = e => {\n                                this.err(\"Events Channel (in) Error\", e);\n                            };\n                            eventsOut.onmessageerror = e => {\n                                this.err(\"Events Channel (out) Error\", e);\n                            };\n                            resolve(this);\n                        }\n                        break;\n                }\n            };\n            /*\n             worker messages are only received via Worker.onmessage,\n             whereas iframe messages are received via window.onmessage or iframe.contentWindow.onmessage.\n             So we need to handle workers and iframes differently\n            */\n            // Worker\n            if (this.target instanceof Worker) {\n                if (this.logs)\n                    console.log(\"Listening on worker for messages\");\n                this.target.addEventListener(\"message\", messagesListener);\n            }\n            // IFrame\n            else {\n                if (this.logs)\n                    console.log(\"Listening on window for messages\");\n                window.addEventListener(\"message\", messagesListener);\n            }\n            // Post meta:\n            // - Workers need this to import the module in the worker initialization, whoich dynamically imports the module\n            // - Iframes need this to init their meta\n            this.target.postMessage({ __type: \"meta\", meta: this.meta }, { targetOrigin: \"*\" }); // TODO targetOrigin\n            setTimeout(() => {\n                if (!resolved)\n                    reject(this.err(\"Connection timeout\", null));\n            }, this.options.connectionTimeout || 5000);\n        });\n    }\n    get state() {\n        return this._state;\n    }\n    err(info, event) {\n        const msg = event instanceof Event ? (event.message || event.data || \"\").toString() : event instanceof Error ? event.message : \"\";\n        const err = new Error(`${info}${msg ? \": \" + msg : \"\"}`);\n        this.options?.onError?.(err);\n        console.error(info, err);\n        return err;\n    }\n    postMessage(type, data, transfer) {\n        this.target.postMessage({ ...data, __type: type }, { transfer });\n    }\n    async execute(operation, ...args) {\n        // TODO \"*\" origin\n        return await (0,_shared_js__WEBPACK_IMPORTED_MODULE_0__.receiveData)(this.target, \"operation\", { args, operation }, \"*\", [], this.options.operationTimeout);\n    }\n    async emitEvent(type, payload) {\n        this.postMessage(\"event\", { event: type, args: payload });\n    }\n    async pushState(newState) {\n        this.postMessage(\"state_push\", { state: newState });\n    }\n}\n\n\n//# sourceURL=webpack://test/../Module.js?");
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Module: () => (/* binding */ Module)
+/* harmony export */ });
+/* harmony import */ var _EventsHandler_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./EventsHandler.js */ "../EventsHandler.js");
+/* harmony import */ var _shared_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shared.js */ "../shared.js");
+
+
+/** Represents an iframe or a worker */
+class Module extends _EventsHandler_js__WEBPACK_IMPORTED_MODULE_0__.EventsHandler {
+    constructor(extension, init, options) {
+        super();
+        this.extension = extension;
+        this.init = init;
+        this.options = options;
+        this.id = (0,_shared_js__WEBPACK_IMPORTED_MODULE_1__.randomId)();
+        this.started = false;
+        this.logs = !!this.extension.provider.options?.logs;
+    }
+    async start() {
+        if (this.started)
+            return this;
+        this.started = true;
+        return new Promise((resolve, reject) => {
+            // In CORS context target is Window (iframe.contentWindow)
+            // We cant define target.onmessage or target.onerror on a cross origin Window
+            // Thats why we listen to the message event on the global object and check the source
+            let resolved = false;
+            const messagesListener = async (e) => {
+                // authenticate
+                // TODO if (e.origin !== this.origin) return;
+                // TODO if (e.data?.__token !== this.meta.authToken) return;
+                if (typeof e?.data?.__type !== "string")
+                    return;
+                const type = e.data.__type;
+                switch (type) {
+                    case "state_populate":
+                        this._state = e.data.state;
+                        this.emitEvent("state_populate", { state: e.data.state, options: e.data.options });
+                        break;
+                    case "operation":
+                        const { args, operation, __port: port } = e.data;
+                        if (!port)
+                            return this.err("Operation Channel Error", "Port not found");
+                        let op = await this.init.out?.[operation];
+                        if (typeof op !== "function")
+                            op = null;
+                        port.onmessageerror = e => {
+                            this.err("Operation Channel Error", e);
+                        };
+                        if (op) {
+                            try {
+                                const result = await op.apply(this, args);
+                                port.postMessage({ __type: "operation:result", payload: result });
+                                this.emitEvent(`op:${operation}`, { args, result, error: null });
+                            }
+                            catch (err) {
+                                const e = this.err("Operation Execution Error", err);
+                                this.emitEvent(`op:${operation}`, { args, result: undefined, error: e });
+                                return;
+                            }
+                        }
+                        else {
+                            this.emitEvent(`op:${operation}`, { args, result: undefined, error: null });
+                        }
+                        break;
+                    case "ready":
+                        if (!resolved)
+                            resolve(this);
+                        this.emitEvent("load", undefined);
+                        resolved = true;
+                        break;
+                }
+            };
+            /*
+             worker messages are only received via Worker.onmessage,
+             whereas iframe messages are received via window.onmessage or iframe.contentWindow.onmessage.
+             So we need to handle workers and iframes differently
+            */
+            // Worker
+            if (this.init.target instanceof Worker) {
+                if (this.logs)
+                    console.log("Listening on worker for messages");
+                this.init.target.addEventListener("message", messagesListener);
+            }
+            // IFrame
+            else {
+                if (this.logs)
+                    console.log("Listening on window for messages");
+                window.addEventListener("message", messagesListener);
+            }
+            // Post meta:
+            // - Workers need this to import the module in the worker initialization, whoich dynamically imports the module
+            // - Iframes need this to init their meta
+            this.init.target.postMessage({ __type: "meta", meta: this.init.meta }, { targetOrigin: "*" }); // TODO targetOrigin
+            setTimeout(() => {
+                if (!resolved)
+                    reject(this.err("Connection timeout", null));
+            }, this.options.connectionTimeout || 5000);
+        });
+    }
+    get state() {
+        return this._state;
+    }
+    get meta() {
+        return this.init.meta;
+    }
+    err(info, event) {
+        const msg = event instanceof Event ? (event.message || event.data || "").toString() : event instanceof Error ? event.message : "";
+        const err = new Error(`${info}${msg ? ": " + msg : ""}`);
+        console.error(info, err);
+        return err;
+    }
+    postMessage(type, data, transfer) {
+        this.init.target.postMessage({ ...data, __type: type }, { transfer });
+    }
+    async execute(operation, ...args) {
+        // TODO "*" origin
+        return await (0,_shared_js__WEBPACK_IMPORTED_MODULE_1__.receiveData)(this.init.target, "operation", { args, operation }, "*", [], this.options.operationTimeout);
+    }
+    async pushState(newState, options) {
+        this.postMessage("state_push", {
+            state: newState,
+            /* Set explicitly to prevent unwanted data from being trandsfered */
+            options: { merge: !!options?.merge },
+        });
+    }
+    destroy() {
+        if (this.init.target instanceof Worker) {
+            try {
+                this.init.target.terminate();
+            }
+            catch (err) { }
+        }
+        this.clearListeners();
+        this.emitEvent("destroy", undefined);
+    }
+}
+
 
 /***/ }),
 
@@ -60,7 +495,58 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
   \**********************/
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   Provider: () => (/* binding */ Provider)\n/* harmony export */ });\n/* harmony import */ var _Extension_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Extension.js */ \"../Extension.js\");\n\nclass Provider {\n    constructor(options) {\n        this.options = options;\n        this.cache = new Map();\n    }\n    async loadExtension(extensionInit) {\n        const extension = new _Extension_js__WEBPACK_IMPORTED_MODULE_0__.Extension(this, extensionInit);\n        try {\n            await extension.start();\n        }\n        catch (err) {\n            throw new Error(`Failed to load extension: ${err}`);\n        }\n        this.cache.set(extension.id, extension);\n        return extension;\n    }\n    allExtensions() {\n        return Array.from(this.cache.values());\n    }\n    getExtension(id) {\n        return this.cache.get(id) || null;\n    }\n}\n\n\n//# sourceURL=webpack://test/../Provider.js?");
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Provider: () => (/* binding */ Provider)
+/* harmony export */ });
+/* harmony import */ var _EventsHandler_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./EventsHandler.js */ "../EventsHandler.js");
+/* harmony import */ var _Extension_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Extension.js */ "../Extension.js");
+
+
+class Provider extends _EventsHandler_js__WEBPACK_IMPORTED_MODULE_0__.EventsHandler {
+    constructor(options) {
+        super();
+        this.options = options;
+        this.cache = new Map();
+    }
+    async loadExtension(extensionInit) {
+        const extension = new _Extension_js__WEBPACK_IMPORTED_MODULE_1__.Extension(this, extensionInit);
+        try {
+            await extension.start();
+        }
+        catch (err) {
+            throw new Error(`Failed to load extension: ${err?.toString()}`);
+        }
+        // propagate events
+        extension.addEventListener("state_populate", e => {
+            this.emitEvent("state_populate", { extension, module: e.payload.module, state: e.payload.state, options: e.payload.module });
+        });
+        extension.addEventListener(null, ev => {
+            if (ev.type.startsWith("op:"))
+                this.emitEvent(ev.type, ev.payload);
+        });
+        extension.addEventListener("destroy", e => {
+            this.cache.delete(extension.id);
+            this.emitEvent("extension_destroy", extension);
+        });
+        this.emitEvent("extension_load", extension);
+        // cache
+        this.cache.set(extension.id, extension);
+        return extension;
+    }
+    allExtensions() {
+        return Array.from(this.cache.values());
+    }
+    getExtension(id) {
+        return this.cache.get(id) || null;
+    }
+    destroy() {
+        const extensions = Array.from(this.cache.values());
+        extensions.forEach(extension => extension.destroy());
+        this.cache.clear();
+    }
+}
+
 
 /***/ }),
 
@@ -70,7 +556,20 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
   \*******************/
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   Extension: () => (/* reexport safe */ _Extension_js__WEBPACK_IMPORTED_MODULE_0__.Extension),\n/* harmony export */   \"default\": () => (__WEBPACK_DEFAULT_EXPORT__)\n/* harmony export */ });\n/* harmony import */ var _Extension_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Extension.js */ \"../Extension.js\");\n/* harmony import */ var _Provider_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Provider.js */ \"../Provider.js\");\n\n\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_Provider_js__WEBPACK_IMPORTED_MODULE_1__.Provider);\n\n\n//# sourceURL=webpack://test/../index.js?");
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Event: () => (/* reexport safe */ _EventsHandler_js__WEBPACK_IMPORTED_MODULE_2__.Event),
+/* harmony export */   Extension: () => (/* reexport safe */ _Extension_js__WEBPACK_IMPORTED_MODULE_0__.Extension),
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _Extension_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Extension.js */ "../Extension.js");
+/* harmony import */ var _Provider_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Provider.js */ "../Provider.js");
+/* harmony import */ var _EventsHandler_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./EventsHandler.js */ "../EventsHandler.js");
+
+
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_Provider_js__WEBPACK_IMPORTED_MODULE_1__.Provider);
+
 
 /***/ }),
 
@@ -80,7 +579,76 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
   \********************/
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   Events: () => (/* binding */ Events),\n/* harmony export */   getMessageData: () => (/* binding */ getMessageData),\n/* harmony export */   isBrowser: () => (/* binding */ isBrowser),\n/* harmony export */   postToParent: () => (/* binding */ postToParent),\n/* harmony export */   randomId: () => (/* binding */ randomId),\n/* harmony export */   receiveData: () => (/* binding */ receiveData),\n/* harmony export */   relPath: () => (/* binding */ relPath)\n/* harmony export */ });\nvar __classPrivateFieldGet = (undefined && undefined.__classPrivateFieldGet) || function (receiver, state, kind, f) {\n    if (kind === \"a\" && !f) throw new TypeError(\"Private accessor was defined without a getter\");\n    if (typeof state === \"function\" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError(\"Cannot read private member from an object whose class did not declare it\");\n    return kind === \"m\" ? f : kind === \"a\" ? f.call(receiver) : f ? f.value : state.get(receiver);\n};\nvar _Events_listeners;\nfunction relPath(path) {\n    if (path.startsWith(\"./\"))\n        path = path.slice(2);\n    else if (path.startsWith(\"/\"))\n        path = path.slice(1);\n    return path;\n}\nfunction getMessageData(e, type) {\n    if (e.data && typeof e.data === \"object\" && e.data.__type === type)\n        return e.data;\n    return null;\n}\nfunction randomId() {\n    const timestamp = new Date().getTime();\n    const random = Math.random().toString(36).substring(2, 9);\n    return `${timestamp}${random}`;\n}\nconst isBrowser = typeof window !== \"undefined\" && window === window.self;\n// TODO origin\nfunction postToParent(type, data, origin = \"*\", transfer) {\n    if (isBrowser)\n        window.parent.postMessage({ ...data, __type: type }, origin, transfer || []);\n    else\n        self.postMessage({ ...data, __type: type }, origin, transfer || []);\n}\nasync function receiveData(target, type, data, origin = \"*\", transfer, errTimeout = 5000) {\n    return new Promise((resolve, reject) => {\n        const channel = new MessageChannel();\n        const out = channel.port1;\n        const _in = channel.port2;\n        let resolved = false;\n        setTimeout(() => {\n            if (!resolved)\n                reject(new Error(\"Operation timeout\"));\n        }, errTimeout || 5000);\n        out.onmessage = async (e) => {\n            const data = getMessageData(e, type + \":result\");\n            if (data) {\n                resolved = true;\n                resolve(data.payload);\n            }\n        };\n        _in.onmessageerror = e => {\n            reject(new Error(\"Channel Error (in)\"));\n        };\n        out.onmessageerror = e => {\n            reject(new Error(\"Channel Error (out)\"));\n        };\n        if (target instanceof Worker) {\n            target.postMessage({ ...data, __type: type, __port: _in }, { transfer: [_in, ...(transfer || [])] });\n        }\n        else\n            target.postMessage({ ...data, __type: type, __port: _in }, origin, [_in, ...(transfer || [])]);\n    });\n}\nclass Events {\n    constructor() {\n        _Events_listeners.set(this, new Map());\n    }\n    addEventListener(type, listener) {\n        if (!__classPrivateFieldGet(this, _Events_listeners, \"f\").has(type))\n            __classPrivateFieldGet(this, _Events_listeners, \"f\").set(type, new Set());\n        __classPrivateFieldGet(this, _Events_listeners, \"f\").get(type)?.add(listener);\n    }\n    removeEventListener(type, listener) {\n        __classPrivateFieldGet(this, _Events_listeners, \"f\").get(type)?.delete(listener);\n    }\n    notifyListeners(type, ...args) {\n        __classPrivateFieldGet(this, _Events_listeners, \"f\").get(type)?.forEach(listener => listener(...args));\n    }\n}\n_Events_listeners = new WeakMap();\n\n\n//# sourceURL=webpack://test/../shared.js?");
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   getMessageData: () => (/* binding */ getMessageData),
+/* harmony export */   isBrowser: () => (/* binding */ isBrowser),
+/* harmony export */   postToParent: () => (/* binding */ postToParent),
+/* harmony export */   randomId: () => (/* binding */ randomId),
+/* harmony export */   receiveData: () => (/* binding */ receiveData),
+/* harmony export */   relPath: () => (/* binding */ relPath)
+/* harmony export */ });
+function relPath(path) {
+    if (path.startsWith("./"))
+        path = path.slice(2);
+    else if (path.startsWith("/"))
+        path = path.slice(1);
+    return path;
+}
+function getMessageData(e, type) {
+    if (e.data && typeof e.data === "object" && e.data.__type === type)
+        return e.data;
+    return null;
+}
+/** 25 char long pseudo cryptic id */
+function randomId() {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let uniqueId = "";
+    for (let i = 0; i < 25; i++) {
+        const randomIndex = Math.floor(Math.random() * chars.length);
+        uniqueId += chars[randomIndex];
+    }
+    return uniqueId;
+}
+const isBrowser = typeof window !== "undefined" && window === window.self;
+// TODO origin
+function postToParent(type, data, origin = "*", transfer) {
+    if (isBrowser)
+        window.parent.postMessage({ ...data, __type: type }, origin, transfer || []);
+    else
+        self.postMessage({ ...data, __type: type }, origin, transfer || []);
+}
+async function receiveData(target, type, data, origin = "*", transfer, errTimeout = 5000) {
+    return new Promise((resolve, reject) => {
+        const channel = new MessageChannel();
+        const out = channel.port1;
+        const _in = channel.port2;
+        let resolved = false;
+        setTimeout(() => {
+            if (!resolved)
+                reject(new Error("Operation timeout"));
+        }, errTimeout || 5000);
+        out.onmessage = async (e) => {
+            const data = getMessageData(e, type + ":result");
+            if (data) {
+                resolved = true;
+                resolve(data.payload);
+            }
+        };
+        _in.onmessageerror = e => {
+            reject(new Error("Channel Error (in)"));
+        };
+        out.onmessageerror = e => {
+            reject(new Error("Channel Error (out)"));
+        };
+        if (target instanceof Worker) {
+            target.postMessage({ ...data, __type: type, __port: _in }, { transfer: [_in, ...(transfer || [])] });
+        }
+        else
+            target.postMessage({ ...data, __type: type, __port: _in }, origin, [_in, ...(transfer || [])]);
+    });
+}
+
 
 /***/ })
 
@@ -140,14 +708,89 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-/******/ 	
-/******/ 	// startup
-/******/ 	// Load entry module and return exports
-/******/ 	// This entry module can't be inlined because the eval devtool is used.
-/******/ 	var __webpack_exports__ = __webpack_require__("./src/index.js");
-/******/ 	
+var __webpack_exports__ = {};
+// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
+(() => {
+/*!**********************!*\
+  !*** ./src/index.ts ***!
+  \**********************/
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _index__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../index */ "../index.js");
+
+main().catch(err => console.error(err));
+const providerApi = {
+    echo: text => {
+        text = text || "";
+        return text + "  " + text + "  " + text;
+    },
+    alert: message => {
+        alert(message || "<empty>");
+    },
+    print: (...text) => {
+        const container = document.getElementById("print");
+        if (container)
+            console.log("Print:", (text || ["<empty>"]).join(" "));
+    },
+    greet: (name, age) => {
+        alert("Hello " + name + " AGE " + age);
+    },
+};
+async function launchIFrames(extension) {
+    const container = document.getElementById("iframe");
+    const container2 = document.getElementById("iframe2");
+    const resetBtn = document.getElementById("reset");
+    if (container && container2 && resetBtn) {
+        const componentModule = await extension.launchComponent(container, "dist/frames/counter/index.html", providerApi);
+        const componentModule2 = await extension.launchComponent(container2, "dist/frames/counter/index.html", providerApi);
+        setInterval(async () => {
+            const newCounter = await componentModule.execute("increment");
+            await componentModule2.execute("increment");
+            console.log(`New counter <${newCounter}> returned by 'increment' execute (Should also be displayed in the iframe)`);
+        }, 7000);
+        resetBtn.onclick = () => {
+            componentModule.execute("reset");
+        };
+    }
+}
+async function launchModule(extension) {
+    const module = await extension.launchModule("dist/math.js", providerApi);
+    console.log("Module loaded:", extension);
+    const operationBtn = document.getElementById("operation");
+    if (operationBtn) {
+        operationBtn.onclick = async () => {
+            if (!module)
+                return alert("Module not loaded");
+            const sum = await module.execute("add", 1, 5);
+            const d = await module.execute("substract", 10, 2);
+            alert("Sum: " + sum + " Sub: " + d);
+        };
+    }
+}
+async function main() {
+    addEventListener("message", e => {
+        console.log("Message received ::", e.data);
+    });
+    const prov = new _index__WEBPACK_IMPORTED_MODULE_0__["default"]({ logs: true });
+    const commitSha = "54497e57bb8de7cd65222c2fb596d6f704c094c0";
+    const extension = await prov.loadExtension({
+        type: "github",
+        name: "andre-hctulc/extensionrunner-test-extension",
+        version: commitSha,
+    });
+    console.log("Extension loaded:", extension);
+    const info = document.getElementById("info");
+    if (info)
+        info.innerHTML = `${extension.pkg.name}@${extension.pkg.version} SHA ${commitSha}`;
+    const stateBtn = document.getElementById("state");
+    let counter = 0;
+    launchIFrames(extension).catch(err => console.error("Error launching iframe", err));
+}
+
+})();
+
 /******/ })()
-;</script>
+;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,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QUNBLDRCQUE0QixtQkFBbUIsR0FBRyx1QkFBdUIsTUFBTSxVQUFVO0FBQ3pGO0FBQ0E7QUFDQTtBQUNBIiwic291cmNlcyI6WyJ3ZWJwYWNrOi8vdGVzdC8uLi9Db3JzV29ya2VyLmpzIiwid2VicGFjazovL3Rlc3QvLi4vRXZlbnRzSGFuZGxlci5qcyIsIndlYnBhY2s6Ly90ZXN0Ly4uL0V4dGVuc2lvbi5qcyIsIndlYnBhY2s6Ly90ZXN0Ly4uL01vZHVsZS5qcyIsIndlYnBhY2s6Ly90ZXN0Ly4uL1Byb3ZpZGVyLmpzIiwid2VicGFjazovL3Rlc3QvLi4vaW5kZXguanMiLCJ3ZWJwYWNrOi8vdGVzdC8uLi9zaGFyZWQuanMiLCJ3ZWJwYWNrOi8vdGVzdC93ZWJwYWNrL2Jvb3RzdHJhcCIsIndlYnBhY2s6Ly90ZXN0L3dlYnBhY2svcnVudGltZS9kZWZpbmUgcHJvcGVydHkgZ2V0dGVycyIsIndlYnBhY2s6Ly90ZXN0L3dlYnBhY2svcnVudGltZS9oYXNPd25Qcm9wZXJ0eSBzaG9ydGhhbmQiLCJ3ZWJwYWNrOi8vdGVzdC93ZWJwYWNrL3J1bnRpbWUvbWFrZSBuYW1lc3BhY2Ugb2JqZWN0Iiwid2VicGFjazovL3Rlc3QvLi9zcmMvaW5kZXgudHMiXSwic291cmNlc0NvbnRlbnQiOlsiLypcblNvdXJjZTogaHR0cHM6Ly9naXRodWIuY29tL3dlYnBhY2svd2VicGFjay9kaXNjdXNzaW9ucy8xNDY0OFxuXG5Ccm93c2VycyBkbyBub3Qgc3VwcG9ydCBDT1JTIGZvciB3ZWIgd29ya2VycyAoYnV0IHRoZXkgc2hvdWxkPykuIFRoaXMgaXMgYSB3b3JrYXJvdW5kIHRvIGxvYWQgYSBzY3JpcHQgZnJvbSBhIGRpZmZlcmVudCBvcmlnaW4uXG4qL1xuZXhwb3J0IGNsYXNzIENvcnNXb3JrZXIge1xuICAgIGNvbnN0cnVjdG9yKHVybCwgb3B0aW9ucykge1xuICAgICAgICB0aGlzLnVybCA9IHVybDtcbiAgICAgICAgdGhpcy5vcHRpb25zID0gb3B0aW9ucztcbiAgICAgICAgdGhpcy5pbml0ZWQgPSBmYWxzZTtcbiAgICB9XG4gICAgYXN5bmMgaW5pdCgpIHtcbiAgICAgICAgaWYgKHRoaXMuaW5pdGVkKVxuICAgICAgICAgICAgcmV0dXJuIHRoaXM7XG4gICAgICAgIHRoaXMuaW5pdGVkID0gdHJ1ZTtcbiAgICAgICAgdHJ5IHtcbiAgICAgICAgICAgIGNvbnN0IHJlc3BvbnNlID0gYXdhaXQgZmV0Y2godGhpcy51cmwpO1xuICAgICAgICAgICAgaWYgKCFyZXNwb25zZS5vaylcbiAgICAgICAgICAgICAgICB0aHJvdyBuZXcgRXJyb3IoKTtcbiAgICAgICAgICAgIGNvbnN0IHRleHQgPSBhd2FpdCByZXNwb25zZS50ZXh0KCk7XG4gICAgICAgICAgICBjb25zdCBvYmplY3RVUkwgPSBVUkwuY3JlYXRlT2JqZWN0VVJMKG5ldyBCbG9iKFt0ZXh0XSwge1xuICAgICAgICAgICAgICAgIHR5cGU6IFwiYXBwbGljYXRpb24vamF2YXNjcmlwdFwiLFxuICAgICAgICAgICAgfSkpO1xuICAgICAgICAgICAgdGhpcy5fd29ya2VyID0gbmV3IFdvcmtlcihvYmplY3RVUkwsIHsgdHlwZTogdGhpcy5vcHRpb25zPy50eXBlLCBuYW1lOiB0aGlzLm9wdGlvbnM/Lm5hbWUgfSk7XG4gICAgICAgIH1cbiAgICAgICAgY2F0Y2ggKGVycikge1xuICAgICAgICAgICAgdGhyb3cgbmV3IEVycm9yKFwiRmFpbGVkIHRvIGNyZWF0ZSB3b3JrZXJcIik7XG4gICAgICAgIH1cbiAgICAgICAgcmV0dXJuIHRoaXM7XG4gICAgfVxuICAgIGdldCB3b3JrZXIoKSB7XG4gICAgICAgIGlmICghdGhpcy5fd29ya2VyKVxuICAgICAgICAgICAgdGhyb3cgbmV3IEVycm9yKFwiQ29yc1dvcmtlciBkaWQgbm90IHN0YXJ0IHByb3Blcmx5XCIpO1xuICAgICAgICByZXR1cm4gdGhpcy5fd29ya2VyO1xuICAgIH1cbn1cbiIsInZhciBfX2NsYXNzUHJpdmF0ZUZpZWxkU2V0ID0gKHRoaXMgJiYgdGhpcy5fX2NsYXNzUHJpdmF0ZUZpZWxkU2V0KSB8fCBmdW5jdGlvbiAocmVjZWl2ZXIsIHN0YXRlLCB2YWx1ZSwga2luZCwgZikge1xuICAgIGlmIChraW5kID09PSBcIm1cIikgdGhyb3cgbmV3IFR5cGVFcnJvcihcIlByaXZhdGUgbWV0aG9kIGlzIG5vdCB3cml0YWJsZVwiKTtcbiAgICBpZiAoa2luZCA9PT0gXCJhXCIgJiYgIWYpIHRocm93IG5ldyBUeXBlRXJyb3IoXCJQcml2YXRlIGFjY2Vzc29yIHdhcyBkZWZpbmVkIHdpdGhvdXQgYSBzZXR0ZXJcIik7XG4gICAgaWYgKHR5cGVvZiBzdGF0ZSA9PT0gXCJmdW5jdGlvblwiID8gcmVjZWl2ZXIgIT09IHN0YXRlIHx8ICFmIDogIXN0YXRlLmhhcyhyZWNlaXZlcikpIHRocm93IG5ldyBUeXBlRXJyb3IoXCJDYW5ub3Qgd3JpdGUgcHJpdmF0ZSBtZW1iZXIgdG8gYW4gb2JqZWN0IHdob3NlIGNsYXNzIGRpZCBub3QgZGVjbGFyZSBpdFwiKTtcbiAgICByZXR1cm4gKGtpbmQgPT09IFwiYVwiID8gZi5jYWxsKHJlY2VpdmVyLCB2YWx1ZSkgOiBmID8gZi52YWx1ZSA9IHZhbHVlIDogc3RhdGUuc2V0KHJlY2VpdmVyLCB2YWx1ZSkpLCB2YWx1ZTtcbn07XG52YXIgX19jbGFzc1ByaXZhdGVGaWVsZEdldCA9ICh0aGlzICYmIHRoaXMuX19jbGFzc1ByaXZhdGVGaWVsZEdldCkgfHwgZnVuY3Rpb24gKHJlY2VpdmVyLCBzdGF0ZSwga2luZCwgZikge1xuICAgIGlmIChraW5kID09PSBcImFcIiAmJiAhZikgdGhyb3cgbmV3IFR5cGVFcnJvcihcIlByaXZhdGUgYWNjZXNzb3Igd2FzIGRlZmluZWQgd2l0aG91dCBhIGdldHRlclwiKTtcbiAgICBpZiAodHlwZW9mIHN0YXRlID09PSBcImZ1bmN0aW9uXCIgPyByZWNlaXZlciAhPT0gc3RhdGUgfHwgIWYgOiAhc3RhdGUuaGFzKHJlY2VpdmVyKSkgdGhyb3cgbmV3IFR5cGVFcnJvcihcIkNhbm5vdCByZWFkIHByaXZhdGUgbWVtYmVyIGZyb20gYW4gb2JqZWN0IHdob3NlIGNsYXNzIGRpZCBub3QgZGVjbGFyZSBpdFwiKTtcbiAgICByZXR1cm4ga2luZCA9PT0gXCJtXCIgPyBmIDoga2luZCA9PT0gXCJhXCIgPyBmLmNhbGwocmVjZWl2ZXIpIDogZiA/IGYudmFsdWUgOiBzdGF0ZS5nZXQocmVjZWl2ZXIpO1xufTtcbnZhciBfRXZlbnRfZGVmYXVsdFByZXZlbnRlZCwgX0V2ZW50c0hhbmRsZXJfbGlzdGVuZXJzLCBfRXZlbnRzSGFuZGxlcl9nbG9iYWxMaXN0ZW5lcnM7XG5leHBvcnQgY2xhc3MgRXZlbnQge1xuICAgIGNvbnN0cnVjdG9yKHR5cGUsIHBheWxvYWQpIHtcbiAgICAgICAgdGhpcy50eXBlID0gdHlwZTtcbiAgICAgICAgdGhpcy5wYXlsb2FkID0gcGF5bG9hZDtcbiAgICAgICAgX0V2ZW50X2RlZmF1bHRQcmV2ZW50ZWQuc2V0KHRoaXMsIGZhbHNlKTtcbiAgICB9XG4gICAgcHJldmVudERlZmF1bHQoKSB7XG4gICAgICAgIF9fY2xhc3NQcml2YXRlRmllbGRTZXQodGhpcywgX0V2ZW50X2RlZmF1bHRQcmV2ZW50ZWQsIHRydWUsIFwiZlwiKTtcbiAgICB9XG4gICAgZ2V0IGRlZmF1bHRQcmV2ZW50ZWQoKSB7XG4gICAgICAgIHJldHVybiBfX2NsYXNzUHJpdmF0ZUZpZWxkR2V0KHRoaXMsIF9FdmVudF9kZWZhdWx0UHJldmVudGVkLCBcImZcIik7XG4gICAgfVxufVxuX0V2ZW50X2RlZmF1bHRQcmV2ZW50ZWQgPSBuZXcgV2Vha01hcCgpO1xuZXhwb3J0IGNsYXNzIEV2ZW50c0hhbmRsZXIge1xuICAgIGNvbnN0cnVjdG9yKCkge1xuICAgICAgICBfRXZlbnRzSGFuZGxlcl9saXN0ZW5lcnMuc2V0KHRoaXMsIG5ldyBNYXAoKSk7XG4gICAgICAgIF9FdmVudHNIYW5kbGVyX2dsb2JhbExpc3RlbmVycy5zZXQodGhpcywgbmV3IFNldCgpKTtcbiAgICB9XG4gICAgYWRkRXZlbnRMaXN0ZW5lcih0eXBlLCBsaXN0ZW5lcikge1xuICAgICAgICBpZiAoIXR5cGUpXG4gICAgICAgICAgICBfX2NsYXNzUHJpdmF0ZUZpZWxkR2V0KHRoaXMsIF9FdmVudHNIYW5kbGVyX2dsb2JhbExpc3RlbmVycywgXCJmXCIpLmFkZChsaXN0ZW5lcik7XG4gICAgICAgIGVsc2Uge1xuICAgICAgICAgICAgaWYgKCFfX2NsYXNzUHJpdmF0ZUZpZWxkR2V0KHRoaXMsIF9FdmVudHNIYW5kbGVyX2xpc3RlbmVycywgXCJmXCIpLmhhcyh0eXBlKSlcbiAgICAgICAgICAgICAgICBfX2NsYXNzUHJpdmF0ZUZpZWxkR2V0KHRoaXMsIF9FdmVudHNIYW5kbGVyX2xpc3RlbmVycywgXCJmXCIpLnNldCh0eXBlLCBuZXcgU2V0KCkpO1xuICAgICAgICAgICAgX19jbGFzc1ByaXZhdGVGaWVsZEdldCh0aGlzLCBfRXZlbnRzSGFuZGxlcl9saXN0ZW5lcnMsIFwiZlwiKS5nZXQodHlwZSk/LmFkZChsaXN0ZW5lcik7XG4gICAgICAgIH1cbiAgICAgICAgcmV0dXJuIGxpc3RlbmVyO1xuICAgIH1cbiAgICByZW1vdmVFdmVudExpc3RlbmVyKHR5cGUsIGxpc3RlbmVyKSB7XG4gICAgICAgIGlmICh0eXBlID09PSBudWxsKVxuICAgICAgICAgICAgX19jbGFzc1ByaXZhdGVGaWVsZEdldCh0aGlzLCBfRXZlbnRzSGFuZGxlcl9nbG9iYWxMaXN0ZW5lcnMsIFwiZlwiKS5kZWxldGUobGlzdGVuZXIpO1xuICAgICAgICBlbHNlXG4gICAgICAgICAgICBfX2NsYXNzUHJpdmF0ZUZpZWxkR2V0KHRoaXMsIF9FdmVudHNIYW5kbGVyX2xpc3RlbmVycywgXCJmXCIpLmdldCh0eXBlKT8uZGVsZXRlKGxpc3RlbmVyKTtcbiAgICB9XG4gICAgZW1pdEV2ZW50KHR5cGUsIHBheWxvYWQpIHtcbiAgICAgICAgY29uc3QgZXYgPSBuZXcgRXZlbnQodHlwZSwgcGF5bG9hZCk7XG4gICAgICAgIF9fY2xhc3NQcml2YXRlRmllbGRHZXQodGhpcywgX0V2ZW50c0hhbmRsZXJfbGlzdGVuZXJzLCBcImZcIikuZ2V0KHR5cGUpPy5mb3JFYWNoKGxpc3RlbmVyID0+IGxpc3RlbmVyKGV2KSk7XG4gICAgICAgIF9fY2xhc3NQcml2YXRlRmllbGRHZXQodGhpcywgX0V2ZW50c0hhbmRsZXJfZ2xvYmFsTGlzdGVuZXJzLCBcImZcIikuZm9yRWFjaChsaXN0ZW5lciA9PiBsaXN0ZW5lcihldikpO1xuICAgICAgICByZXR1cm4gZXY7XG4gICAgfVxuICAgIGNsZWFyTGlzdGVuZXJzKCkge1xuICAgICAgICBfX2NsYXNzUHJpdmF0ZUZpZWxkR2V0KHRoaXMsIF9FdmVudHNIYW5kbGVyX2dsb2JhbExpc3RlbmVycywgXCJmXCIpLmNsZWFyKCk7XG4gICAgICAgIF9fY2xhc3NQcml2YXRlRmllbGRHZXQodGhpcywgX0V2ZW50c0hhbmRsZXJfbGlzdGVuZXJzLCBcImZcIikuY2xlYXIoKTtcbiAgICB9XG59XG5fRXZlbnRzSGFuZGxlcl9saXN0ZW5lcnMgPSBuZXcgV2Vha01hcCgpLCBfRXZlbnRzSGFuZGxlcl9nbG9iYWxMaXN0ZW5lcnMgPSBuZXcgV2Vha01hcCgpO1xuIiwiaW1wb3J0IHsgQ29yc1dvcmtlciB9IGZyb20gXCIuL0NvcnNXb3JrZXIuanNcIjtcbmltcG9ydCB7IE1vZHVsZSB9IGZyb20gXCIuL01vZHVsZS5qc1wiO1xuaW1wb3J0IHsgcmFuZG9tSWQsIHJlbFBhdGggfSBmcm9tIFwiLi9zaGFyZWQuanNcIjtcbmltcG9ydCB7IEV2ZW50c0hhbmRsZXIgfSBmcm9tIFwiLi9FdmVudHNIYW5kbGVyLmpzXCI7XG5jb25zdCBqc2RlbGl2ciA9IFwiaHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0XCI7XG5leHBvcnQgY2xhc3MgRXh0ZW5zaW9uIGV4dGVuZHMgRXZlbnRzSGFuZGxlciB7XG4gICAgY29uc3RydWN0b3IocHJvdmlkZXIsIGluaXQpIHtcbiAgICAgICAgc3VwZXIoKTtcbiAgICAgICAgdGhpcy5wcm92aWRlciA9IHByb3ZpZGVyO1xuICAgICAgICB0aGlzLmluaXQgPSBpbml0O1xuICAgICAgICB0aGlzLnVybCA9IFwiXCI7XG4gICAgICAgIHRoaXMuX3BrZyA9IHt9O1xuICAgICAgICB0aGlzLnN0YXJ0ZWQgPSBmYWxzZTtcbiAgICAgICAgLyoqIGA8cGF0aCwgeyBpbnN0YW5jZXM6IDxNb2R1bGUsIGRhdGE+LCBzaGFyZWRTdGF0ZTogYW55IH0+YCAqL1xuICAgICAgICB0aGlzLmNhY2hlID0gbmV3IE1hcCgpO1xuICAgICAgICBpZiAodGhpcy50eXBlID09PSBcImdpdGh1YlwiKSB7XG4gICAgICAgICAgICBjb25zdCBbb3duZXIsIHJlcG9dID0gdGhpcy5pbml0Lm5hbWUuc3BsaXQoXCIvXCIpO1xuICAgICAgICAgICAgdGhpcy51cmwgPSBgJHtqc2RlbGl2cn0vZ2gvJHtvd25lcn0vJHtyZXBvfUAke2luaXQudmVyc2lvbn0vYDtcbiAgICAgICAgfVxuICAgICAgICBlbHNlIGlmICh0aGlzLnR5cGUgPT09IFwibnBtXCIpIHtcbiAgICAgICAgICAgIHRoaXMudXJsID0gYCR7anNkZWxpdnJ9L25wbS8ke2luaXQubmFtZX1AJHtpbml0LnZlcnNpb259L2A7XG4gICAgICAgIH1cbiAgICAgICAgZWxzZVxuICAgICAgICAgICAgdGhyb3cgbmV3IEVycm9yKFwiSW52YWxpZCB0eXBlICgnbnBtJyBvciAnZ2l0aHViJyBleHBlY3RlZClcIik7XG4gICAgfVxuICAgIGFzeW5jIHN0YXJ0KCkge1xuICAgICAgICBpZiAodGhpcy5zdGFydGVkKVxuICAgICAgICAgICAgcmV0dXJuO1xuICAgICAgICB0aGlzLnN0YXJ0ZWQgPSB0cnVlO1xuICAgICAgICAvLyBsb2FkIG1ldGEgKHBhY2thZ2UuanNvbilcbiAgICAgICAgY29uc3QgZmlsZSA9IGF3YWl0IHRoaXMubG9hZEZpbGUoXCJwYWNrYWdlLmpzb25cIik7XG4gICAgICAgIGNvbnN0IHRleHQgPSBhd2FpdCBmaWxlLnRleHQoKTtcbiAgICAgICAgdGhpcy5fcGtnID0gSlNPTi5wYXJzZSh0ZXh0KTtcbiAgICB9XG4gICAgLyoqIFdoZW4gdGhlIGZpbHRlciBpcyBlbXB0eSBubyBtb2R1bGVzIGFyZSByZXR1cm5lZCAqL1xuICAgIGZpbHRlck1vZHVsZXMoZmlsdGVyKSB7XG4gICAgICAgIGNvbnN0IGFsbCA9IHRoaXMuZ2V0QWxsTW9kdWxlcygpO1xuICAgICAgICBjb25zdCBpZHNTZXQgPSBuZXcgU2V0KEFycmF5LmlzQXJyYXkoZmlsdGVyLmlkKSA/IGZpbHRlci5pZCA6IFtmaWx0ZXIuaWRdKTtcbiAgICAgICAgY29uc3Qgbm90SWRzU2V0ID0gbmV3IFNldChBcnJheS5pc0FycmF5KGZpbHRlci5ub3RJZCkgPyBmaWx0ZXIubm90SWQgOiBbZmlsdGVyLm5vdElkXSk7XG4gICAgICAgIGNvbnN0IHBhdGhzU2V0ID0gbmV3IFNldChBcnJheS5pc0FycmF5KGZpbHRlci5wYXRoKSA/IGZpbHRlci5wYXRoIDogW2ZpbHRlci5wYXRoXSk7XG4gICAgICAgIGNvbnN0IG5vdFBhdGhzU2V0ID0gbmV3IFNldChBcnJheS5pc0FycmF5KGZpbHRlci5ub3RQYXRoKSA/IGZpbHRlci5ub3RQYXRoIDogW2ZpbHRlci5ub3RQYXRoXSk7XG4gICAgICAgIHJldHVybiBhbGwuZmlsdGVyKG1vZHVsZSA9PiB7XG4gICAgICAgICAgICBsZXQgaW5jbHVkZSA9IGlkc1NldC5oYXMobW9kdWxlLmlkKTtcbiAgICAgICAgICAgIGlmIChmaWx0ZXIubm90SWQgJiYgbm90SWRzU2V0Lmhhcyhtb2R1bGUuaWQpICYmIGZpbHRlci5hbmQpXG4gICAgICAgICAgICAgICAgaW5jbHVkZSA9IGZhbHNlO1xuICAgICAgICAgICAgaWYgKGZpbHRlci5wYXRoICYmICFwYXRoc1NldC5oYXMobW9kdWxlLm1ldGEucGF0aCkgJiYgZmlsdGVyLmFuZClcbiAgICAgICAgICAgICAgICBpbmNsdWRlID0gZmFsc2U7XG4gICAgICAgICAgICBpZiAoZmlsdGVyLm5vdFBhdGggJiYgbm90UGF0aHNTZXQuaGFzKG1vZHVsZS5tZXRhLnBhdGgpICYmIGZpbHRlci5hbmQpXG4gICAgICAgICAgICAgICAgaW5jbHVkZSA9IGZhbHNlO1xuICAgICAgICAgICAgaWYgKGZpbHRlci5jaGVjayAmJiAhKGZpbHRlci5hbmQgJiYgIWluY2x1ZGUpKSB7XG4gICAgICAgICAgICAgICAgaWYgKGZpbHRlci5jaGVjayhtb2R1bGUpKVxuICAgICAgICAgICAgICAgICAgICBpbmNsdWRlID0gdHJ1ZTtcbiAgICAgICAgICAgIH1cbiAgICAgICAgICAgIHJldHVybiBpbmNsdWRlO1xuICAgICAgICB9KTtcbiAgICB9XG4gICAgZ2V0QWxsTW9kdWxlcygpIHtcbiAgICAgICAgcmV0dXJuIEFycmF5LmZyb20odGhpcy5jYWNoZS52YWx1ZXMoKSkuZmxhdE1hcCgoeyBpbnN0YW5jZXMgfSkgPT4gQXJyYXkuZnJvbShpbnN0YW5jZXMudmFsdWVzKCkpKTtcbiAgICB9XG4gICAgLyoqXG4gICAgICogQHBhcmFtIHBhdGggVXNlIF9udWxsXyBvciBlbXB0eSBzdHJpbmcgZm9yIHRoZSBwYWNrYWdlcyBlbnRyeSBmaWxlXG4gICAgICovXG4gICAgYXN5bmMgbGF1bmNoTW9kdWxlKHBhdGgsIG91dCwgbWV0YSkge1xuICAgICAgICBwYXRoID0gcmVsUGF0aChwYXRoIHx8IFwiXCIpO1xuICAgICAgICAvLyBJTVAgdXNlIGNvcnJlY3QgbnBtIHZlcnNpb24gZm9yIHRoZSBuZXdlc3Qgd3Jva2VyIGJ1aWxkIChleHRlbnNpb25ydW5uZXJAdmVyc2lvbilcbiAgICAgICAgY29uc3QgY29yc1dvcmtlciA9IG5ldyBDb3JzV29ya2VyKGpzZGVsaXZyICsgXCIvbnBtL2V4dGVuc2lvbnJ1bm5lckAxLjAuMjkvd29ya2VyLmpzXCIsIHsgdHlwZTogXCJtb2R1bGVcIiwgbmFtZTogYCR7dGhpcy5pbml0Lm5hbWV9OiR7cGF0aH1gIH0pO1xuICAgICAgICBhd2FpdCBjb3JzV29ya2VyLmluaXQoKTtcbiAgICAgICAgY29uc3QgbW9kID0gdGhpcy5pbml0TW9kdWxlKGNvcnNXb3JrZXIud29ya2VyLCBqc2RlbGl2ciwgcGF0aCwgb3V0LCBtZXRhKTtcbiAgICAgICAgcmV0dXJuIG1vZC5zdGFydCgpO1xuICAgIH1cbiAgICBhc3luYyBsYXVuY2hDb21wb25lbnQocGFyZW50RWxlbWVudCwgcGF0aCwgb3V0LCBtZXRhKSB7XG4gICAgICAgIHBhdGggPSByZWxQYXRoKHBhdGgpO1xuICAgICAgICAvLyBNb3N0IENETnMgZG8gbm90IGRpcmVjdGx5IHNlcnZlIGh0bWwgZmlsZXMsIHRoZXkgc2VydmUgdGhlIGh0bWwgYXMgYSBzdHJpbmcgaW4gYSByZXNwb25zZS4gU28gZG9lcyBqc2RlbGl2ciBhbmQgdW5wa2cuXG4gICAgICAgIC8vIFNvIHdlIGZldGNoIHRoZSBodG1sIGFuZCB1c2UgaWZybS5zcmNkb2MgdG8gbG9hZCB0aGUgaHRtbFxuICAgICAgICBjb25zdCBpZnJhbWUgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KFwiaWZyYW1lXCIpO1xuICAgICAgICBsZXQgdXJsO1xuICAgICAgICBsZXQgb3JpZ2luO1xuICAgICAgICBpZiAodGhpcy50eXBlID09PSBcImdpdGh1YlwiKSB7XG4gICAgICAgICAgICBjb25zdCBbb3duZXIsIHJlcG9dID0gdGhpcy5pbml0Lm5hbWUuc3BsaXQoXCIvXCIpO1xuICAgICAgICAgICAgb3JpZ2luID0gXCJodHRwczovL3Jhdy5naXRoYWNrLmNvbVwiO1xuICAgICAgICAgICAgdXJsID0gYCR7b3JpZ2lufS8ke293bmVyfS8ke3JlcG99LyR7dGhpcy5pbml0LnZlcnNpb259LyR7cGF0aH1gO1xuICAgICAgICB9XG4gICAgICAgIGVsc2UgaWYgKHRoaXMudHlwZSA9PT0gXCJucG1cIikge1xuICAgICAgICAgICAgLy8gVE9ETyBzZWUgSW5mby5tZCBDRE5zXG4gICAgICAgICAgICBvcmlnaW4gPSBcImh0dHBzOi8vdW5wa2cuY29tXCI7XG4gICAgICAgICAgICB1cmwgPSBgJHtvcmlnaW59LyR7dGhpcy5pbml0Lm5hbWV9QCR7dGhpcy5pbml0LnZlcnNpb259LyR7cGF0aH1gO1xuICAgICAgICB9XG4gICAgICAgIGVsc2VcbiAgICAgICAgICAgIHRocm93IG5ldyBFcnJvcihcIkludmFsaWQgdHlwZSAoJ25wbScgb3IgJ2dpdGh1YicgZXhwZWN0ZWQpXCIpO1xuICAgICAgICBpZnJhbWUuc3JjID0gdXJsO1xuICAgICAgICBpZnJhbWUuc2V0QXR0cmlidXRlKFwic2FuZGJveFwiLCBcImFsbG93LXNjcmlwdHMgYWxsb3ctc2FtZS1vcmlnaW5cIik7XG4gICAgICAgIC8vIFRPRE9EIG1vcmUgYXR0cnM/XG4gICAgICAgIC8vIHdhaXQgZm9yIGxvYWRcbiAgICAgICAgcmV0dXJuIG5ldyBQcm9taXNlKChyZXNvbHZlLCByZWplY3QpID0+IHtcbiAgICAgICAgICAgIGlmcmFtZS5vbmxvYWQgPSBhc3luYyAoZSkgPT4ge1xuICAgICAgICAgICAgICAgIGlmICghaWZyYW1lLmNvbnRlbnRXaW5kb3cpXG4gICAgICAgICAgICAgICAgICAgIHJldHVybiByZWplY3QoXCJgY29udGVudFdpbmRvd2BuZG93IG5vdCBkZWZpbmVkXCIpO1xuICAgICAgICAgICAgICAgIGNvbnN0IG1vZCA9IHRoaXMuaW5pdE1vZHVsZShpZnJhbWUuY29udGVudFdpbmRvdywgb3JpZ2luLCBwYXRoLCBvdXQsIG1ldGEpO1xuICAgICAgICAgICAgICAgIHJlc29sdmUobW9kLnN0YXJ0KCkpO1xuICAgICAgICAgICAgfTtcbiAgICAgICAgICAgIGlmcmFtZS5hZGRFdmVudExpc3RlbmVyKFwiZXJyb3JcIiwgZSA9PiB7XG4gICAgICAgICAgICAgICAgcmVqZWN0KG5ldyBFcnJvcihlLm1lc3NhZ2UpKTtcbiAgICAgICAgICAgIH0pO1xuICAgICAgICAgICAgcGFyZW50RWxlbWVudC5hcHBlbmRDaGlsZChpZnJhbWUpO1xuICAgICAgICB9KTtcbiAgICB9XG4gICAgaW5pdE1vZHVsZSh0YXJnZXQsIG9yaWdpbiwgcGF0aCwgb3V0LCBtZXRhKSB7XG4gICAgICAgIC8vIGdlbnJhdGUgcmFuZG9tIGlkXG4gICAgICAgIGxldCBfbWV0YSA9IHtcbiAgICAgICAgICAgIGF1dGhUb2tlbjogcmFuZG9tSWQoKSxcbiAgICAgICAgICAgIG5hbWU6IHRoaXMuaW5pdC5uYW1lLFxuICAgICAgICAgICAgcGF0aCxcbiAgICAgICAgICAgIGluaXRpYWxTdGF0ZTogdGhpcy5jYWNoZS5nZXQocGF0aCk/LnNoYXJlZFN0YXRlLFxuICAgICAgICAgICAgdmVyc2lvbjogdGhpcy5pbml0LnZlcnNpb24sXG4gICAgICAgICAgICB0eXBlOiB0aGlzLmluaXQudHlwZSxcbiAgICAgICAgfTtcbiAgICAgICAgX21ldGEgPSB0aGlzLmluaXQubWV0YSA/IHRoaXMuaW5pdC5tZXRhKF9tZXRhKSA6IF9tZXRhO1xuICAgICAgICBpZiAobWV0YSlcbiAgICAgICAgICAgIF9tZXRhID0gbWV0YShfbWV0YSk7XG4gICAgICAgIC8vIGNyZWF0ZSBtb2R1bGVcbiAgICAgICAgY29uc3QgbW9kID0gbmV3IE1vZHVsZSh0aGlzLCB7IG9yaWdpbiwgdGFyZ2V0LCBtZXRhOiBfbWV0YSwgb3V0IH0sIHtcbiAgICAgICAgICAgIG9wZXJhdGlvblRpbWVvdXQ6IHRoaXMuaW5pdC5vcGVyYXRpb25UaW1lb3V0LFxuICAgICAgICAgICAgY29ubmVjdGlvblRpbWVvdXQ6IHRoaXMuaW5pdC5jb25uZWN0aW9uVGltZW91dCxcbiAgICAgICAgfSk7XG4gICAgICAgIC8vIHByb3BhZ2F0ZSBldmVudHNcbiAgICAgICAgbW9kLmFkZEV2ZW50TGlzdGVuZXIobnVsbCwgZXYgPT4ge1xuICAgICAgICAgICAgaWYgKGV2LnR5cGUuc3RhcnRzV2l0aChcIm9wOlwiKSlcbiAgICAgICAgICAgICAgICB0aGlzLmVtaXRFdmVudChldi50eXBlLCBldi5wYXlsb2FkKTtcbiAgICAgICAgfSk7XG4gICAgICAgIG1vZC5hZGRFdmVudExpc3RlbmVyKFwic3RhdGVfcG9wdWxhdGVcIiwgZXYgPT4ge1xuICAgICAgICAgICAgaWYgKHRoaXMuY2FjaGUuaGFzKHBhdGgpKVxuICAgICAgICAgICAgICAgIHRoaXMuY2FjaGUuZ2V0KHBhdGgpLnNoYXJlZFN0YXRlID0gZXYucGF5bG9hZDtcbiAgICAgICAgICAgIHRoaXMuZmlsdGVyTW9kdWxlcyh7IHBhdGgsIG5vdElkOiBtb2QuaWQgfSkuZm9yRWFjaChtb2R1bGUgPT4ge1xuICAgICAgICAgICAgICAgIG1vZHVsZS5wdXNoU3RhdGUoZXYucGF5bG9hZCwgeyBtZXJnZTogdHJ1ZSB9KTtcbiAgICAgICAgICAgIH0pO1xuICAgICAgICAgICAgdGhpcy5lbWl0RXZlbnQoXCJzdGF0ZV9wb3B1bGF0ZVwiLCB7IG1vZHVsZTogbW9kLCBzdGF0ZTogZXYucGF5bG9hZC5zdGF0ZSwgb3B0aW9uczogZXYucGF5bG9hZC5vcHRpb25zIH0pO1xuICAgICAgICB9KTtcbiAgICAgICAgbW9kLmFkZEV2ZW50TGlzdGVuZXIoXCJkZXN0cm95XCIsICgpID0+IHtcbiAgICAgICAgICAgIHRoaXMuY2FjaGUuZ2V0KHBhdGgpPy5pbnN0YW5jZXMuZGVsZXRlKG1vZC5pZCk7XG4gICAgICAgICAgICB0aGlzLmVtaXRFdmVudChcIm1vZHVsZV9kZXN0cm95XCIsIG1vZCk7XG4gICAgICAgIH0pO1xuICAgICAgICAvLyBjYWNoZVxuICAgICAgICBsZXQgaW5zdGFuY2VzID0gdGhpcy5jYWNoZS5nZXQocGF0aCk/Lmluc3RhbmNlcztcbiAgICAgICAgaWYgKCFpbnN0YW5jZXMpIHtcbiAgICAgICAgICAgIGluc3RhbmNlcyA9IG5ldyBNYXAoKTtcbiAgICAgICAgICAgIHRoaXMuY2FjaGUuc2V0KHBhdGgsIHsgaW5zdGFuY2VzLCBzaGFyZWRTdGF0ZTogdW5kZWZpbmVkIH0pO1xuICAgICAgICB9XG4gICAgICAgIGluc3RhbmNlcy5zZXQobW9kLmlkLCBtb2QpO1xuICAgICAgICB0aGlzLmVtaXRFdmVudChcIm1vZHVsZV9sb2FkXCIsIG1vZCk7XG4gICAgICAgIHJldHVybiBtb2Q7XG4gICAgfVxuICAgIGdldCBpZCgpIHtcbiAgICAgICAgcmV0dXJuIHRoaXMuaW5pdC50eXBlICsgXCIlXCIgKyB0aGlzLmluaXQubmFtZTtcbiAgICB9XG4gICAgZ2V0IHBrZygpIHtcbiAgICAgICAgcmV0dXJuIHRoaXMuX3BrZztcbiAgICB9XG4gICAgZ2V0IHR5cGUoKSB7XG4gICAgICAgIHJldHVybiB0aGlzLmluaXQudHlwZTtcbiAgICB9XG4gICAgZ2V0VXJsKHBhdGgsIHNlYXJjaFBhcmFtcykge1xuICAgICAgICBpZiAoc2VhcmNoUGFyYW1zICYmICFzZWFyY2hQYXJhbXMuc3RhcnRzV2l0aChcIj9cIikpXG4gICAgICAgICAgICBzZWFyY2hQYXJhbXMgPSBcIj9cIiArIHNlYXJjaFBhcmFtcztcbiAgICAgICAgcmV0dXJuIHRoaXMudXJsICsgcGF0aCArIChzZWFyY2hQYXJhbXMgfHwgXCJcIik7XG4gICAgfVxuICAgIC8qKiBJZiB0aGUgcmVzcG9uc2UgaXMgbm90IG9rLCB0aGUgYFJlc3BvbnNlYCB3aWxsIGJlIHNldCBvbiB0aGUgdGhyb3duIGVycm9yIChgRXJyb3IucmVzcG9uc2VgKSAqL1xuICAgIGFzeW5jIGxvYWRGaWxlKHBhdGgpIHtcbiAgICAgICAgaWYgKHBhdGguc3RhcnRzV2l0aChcIi9cIikpXG4gICAgICAgICAgICBwYXRoID0gcGF0aC5zbGljZSgxKTtcbiAgICAgICAgZWxzZSBpZiAocGF0aC5zdGFydHNXaXRoKFwiLi9cIikpXG4gICAgICAgICAgICBwYXRoID0gcGF0aC5zbGljZSgyKTtcbiAgICAgICAgY29uc3QgcmVzcG9uc2UgPSBhd2FpdCBmZXRjaCh0aGlzLmdldFVybChwYXRoKSwgdGhpcy50eXBlID09PSBcImdpdGh1YlwiID8ge30gOiB7fSk7XG4gICAgICAgIGlmICghcmVzcG9uc2Uub2spIHtcbiAgICAgICAgICAgIGNvbnN0IGVycm9yID0gbmV3IEVycm9yKGBGYWlsZWQgdG8gbG9hZCBmaWxlOiAke3Jlc3BvbnNlLnN0YXR1c1RleHR9YCk7XG4gICAgICAgICAgICBlcnJvci5yZXNwb25zZSA9IHJlc3BvbnNlO1xuICAgICAgICAgICAgdGhyb3cgbmV3IEVycm9yKGBGYWlsZWQgdG8gbG9hZCBmaWxlOiAke3Jlc3BvbnNlLnN0YXR1c1RleHR9YCk7XG4gICAgICAgIH1cbiAgICAgICAgcmV0dXJuIHJlc3BvbnNlO1xuICAgIH1cbiAgICBwdXNoU3RhdGUobmV3U3RhdGUsIG9wdGlvbnMpIHtcbiAgICAgICAgY29uc3QgbW9kdWxlcyA9IG9wdGlvbnM/LmZpbHRlciA/IHRoaXMuZmlsdGVyTW9kdWxlcyhvcHRpb25zPy5maWx0ZXIgfHwge30pIDogdGhpcy5nZXRBbGxNb2R1bGVzKCk7XG4gICAgICAgIGZvciAoY29uc3QgbW9kdWxlIG9mIG1vZHVsZXMpIHtcbiAgICAgICAgICAgIG1vZHVsZS5wdXNoU3RhdGUobmV3U3RhdGUsIHsgbWVyZ2U6ICFvcHRpb25zPy5vdmVyd3JpdGUgfSk7XG4gICAgICAgIH1cbiAgICB9XG4gICAgZGVzdHJveSgpIHtcbiAgICAgICAgY29uc3QgYWxsID0gdGhpcy5nZXRBbGxNb2R1bGVzKCk7XG4gICAgICAgIGFsbC5mb3JFYWNoKG1vZHVsZSA9PiBtb2R1bGUuZGVzdHJveSgpKTtcbiAgICAgICAgdGhpcy5jYWNoZS5jbGVhcigpO1xuICAgICAgICB0aGlzLmNsZWFyTGlzdGVuZXJzKCk7XG4gICAgICAgIHRoaXMuZW1pdEV2ZW50KFwiZGVzdHJveVwiLCB1bmRlZmluZWQpO1xuICAgIH1cbn1cbiIsImltcG9ydCB7IEV2ZW50c0hhbmRsZXIgfSBmcm9tIFwiLi9FdmVudHNIYW5kbGVyLmpzXCI7XG5pbXBvcnQgeyByYW5kb21JZCwgcmVjZWl2ZURhdGEgfSBmcm9tIFwiLi9zaGFyZWQuanNcIjtcbi8qKiBSZXByZXNlbnRzIGFuIGlmcmFtZSBvciBhIHdvcmtlciAqL1xuZXhwb3J0IGNsYXNzIE1vZHVsZSBleHRlbmRzIEV2ZW50c0hhbmRsZXIge1xuICAgIGNvbnN0cnVjdG9yKGV4dGVuc2lvbiwgaW5pdCwgb3B0aW9ucykge1xuICAgICAgICBzdXBlcigpO1xuICAgICAgICB0aGlzLmV4dGVuc2lvbiA9IGV4dGVuc2lvbjtcbiAgICAgICAgdGhpcy5pbml0ID0gaW5pdDtcbiAgICAgICAgdGhpcy5vcHRpb25zID0gb3B0aW9ucztcbiAgICAgICAgdGhpcy5pZCA9IHJhbmRvbUlkKCk7XG4gICAgICAgIHRoaXMuc3RhcnRlZCA9IGZhbHNlO1xuICAgICAgICB0aGlzLmxvZ3MgPSAhIXRoaXMuZXh0ZW5zaW9uLnByb3ZpZGVyLm9wdGlvbnM/LmxvZ3M7XG4gICAgfVxuICAgIGFzeW5jIHN0YXJ0KCkge1xuICAgICAgICBpZiAodGhpcy5zdGFydGVkKVxuICAgICAgICAgICAgcmV0dXJuIHRoaXM7XG4gICAgICAgIHRoaXMuc3RhcnRlZCA9IHRydWU7XG4gICAgICAgIHJldHVybiBuZXcgUHJvbWlzZSgocmVzb2x2ZSwgcmVqZWN0KSA9PiB7XG4gICAgICAgICAgICAvLyBJbiBDT1JTIGNvbnRleHQgdGFyZ2V0IGlzIFdpbmRvdyAoaWZyYW1lLmNvbnRlbnRXaW5kb3cpXG4gICAgICAgICAgICAvLyBXZSBjYW50IGRlZmluZSB0YXJnZXQub25tZXNzYWdlIG9yIHRhcmdldC5vbmVycm9yIG9uIGEgY3Jvc3Mgb3JpZ2luIFdpbmRvd1xuICAgICAgICAgICAgLy8gVGhhdHMgd2h5IHdlIGxpc3RlbiB0byB0aGUgbWVzc2FnZSBldmVudCBvbiB0aGUgZ2xvYmFsIG9iamVjdCBhbmQgY2hlY2sgdGhlIHNvdXJjZVxuICAgICAgICAgICAgbGV0IHJlc29sdmVkID0gZmFsc2U7XG4gICAgICAgICAgICBjb25zdCBtZXNzYWdlc0xpc3RlbmVyID0gYXN5bmMgKGUpID0+IHtcbiAgICAgICAgICAgICAgICAvLyBhdXRoZW50aWNhdGVcbiAgICAgICAgICAgICAgICAvLyBUT0RPIGlmIChlLm9yaWdpbiAhPT0gdGhpcy5vcmlnaW4pIHJldHVybjtcbiAgICAgICAgICAgICAgICAvLyBUT0RPIGlmIChlLmRhdGE/Ll9fdG9rZW4gIT09IHRoaXMubWV0YS5hdXRoVG9rZW4pIHJldHVybjtcbiAgICAgICAgICAgICAgICBpZiAodHlwZW9mIGU/LmRhdGE/Ll9fdHlwZSAhPT0gXCJzdHJpbmdcIilcbiAgICAgICAgICAgICAgICAgICAgcmV0dXJuO1xuICAgICAgICAgICAgICAgIGNvbnN0IHR5cGUgPSBlLmRhdGEuX190eXBlO1xuICAgICAgICAgICAgICAgIHN3aXRjaCAodHlwZSkge1xuICAgICAgICAgICAgICAgICAgICBjYXNlIFwic3RhdGVfcG9wdWxhdGVcIjpcbiAgICAgICAgICAgICAgICAgICAgICAgIHRoaXMuX3N0YXRlID0gZS5kYXRhLnN0YXRlO1xuICAgICAgICAgICAgICAgICAgICAgICAgdGhpcy5lbWl0RXZlbnQoXCJzdGF0ZV9wb3B1bGF0ZVwiLCB7IHN0YXRlOiBlLmRhdGEuc3RhdGUsIG9wdGlvbnM6IGUuZGF0YS5vcHRpb25zIH0pO1xuICAgICAgICAgICAgICAgICAgICAgICAgYnJlYWs7XG4gICAgICAgICAgICAgICAgICAgIGNhc2UgXCJvcGVyYXRpb25cIjpcbiAgICAgICAgICAgICAgICAgICAgICAgIGNvbnN0IHsgYXJncywgb3BlcmF0aW9uLCBfX3BvcnQ6IHBvcnQgfSA9IGUuZGF0YTtcbiAgICAgICAgICAgICAgICAgICAgICAgIGlmICghcG9ydClcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICByZXR1cm4gdGhpcy5lcnIoXCJPcGVyYXRpb24gQ2hhbm5lbCBFcnJvclwiLCBcIlBvcnQgbm90IGZvdW5kXCIpO1xuICAgICAgICAgICAgICAgICAgICAgICAgbGV0IG9wID0gYXdhaXQgdGhpcy5pbml0Lm91dD8uW29wZXJhdGlvbl07XG4gICAgICAgICAgICAgICAgICAgICAgICBpZiAodHlwZW9mIG9wICE9PSBcImZ1bmN0aW9uXCIpXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgb3AgPSBudWxsO1xuICAgICAgICAgICAgICAgICAgICAgICAgcG9ydC5vbm1lc3NhZ2VlcnJvciA9IGUgPT4ge1xuICAgICAgICAgICAgICAgICAgICAgICAgICAgIHRoaXMuZXJyKFwiT3BlcmF0aW9uIENoYW5uZWwgRXJyb3JcIiwgZSk7XG4gICAgICAgICAgICAgICAgICAgICAgICB9O1xuICAgICAgICAgICAgICAgICAgICAgICAgaWYgKG9wKSB7XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgdHJ5IHtcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY29uc3QgcmVzdWx0ID0gYXdhaXQgb3AuYXBwbHkodGhpcywgYXJncyk7XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBvcnQucG9zdE1lc3NhZ2UoeyBfX3R5cGU6IFwib3BlcmF0aW9uOnJlc3VsdFwiLCBwYXlsb2FkOiByZXN1bHQgfSk7XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHRoaXMuZW1pdEV2ZW50KGBvcDoke29wZXJhdGlvbn1gLCB7IGFyZ3MsIHJlc3VsdCwgZXJyb3I6IG51bGwgfSk7XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgfVxuICAgICAgICAgICAgICAgICAgICAgICAgICAgIGNhdGNoIChlcnIpIHtcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY29uc3QgZSA9IHRoaXMuZXJyKFwiT3BlcmF0aW9uIEV4ZWN1dGlvbiBFcnJvclwiLCBlcnIpO1xuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aGlzLmVtaXRFdmVudChgb3A6JHtvcGVyYXRpb259YCwgeyBhcmdzLCByZXN1bHQ6IHVuZGVmaW5lZCwgZXJyb3I6IGUgfSk7XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHJldHVybjtcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICB9XG4gICAgICAgICAgICAgICAgICAgICAgICB9XG4gICAgICAgICAgICAgICAgICAgICAgICBlbHNlIHtcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aGlzLmVtaXRFdmVudChgb3A6JHtvcGVyYXRpb259YCwgeyBhcmdzLCByZXN1bHQ6IHVuZGVmaW5lZCwgZXJyb3I6IG51bGwgfSk7XG4gICAgICAgICAgICAgICAgICAgICAgICB9XG4gICAgICAgICAgICAgICAgICAgICAgICBicmVhaztcbiAgICAgICAgICAgICAgICAgICAgY2FzZSBcInJlYWR5XCI6XG4gICAgICAgICAgICAgICAgICAgICAgICBpZiAoIXJlc29sdmVkKVxuICAgICAgICAgICAgICAgICAgICAgICAgICAgIHJlc29sdmUodGhpcyk7XG4gICAgICAgICAgICAgICAgICAgICAgICB0aGlzLmVtaXRFdmVudChcImxvYWRcIiwgdW5kZWZpbmVkKTtcbiAgICAgICAgICAgICAgICAgICAgICAgIHJlc29sdmVkID0gdHJ1ZTtcbiAgICAgICAgICAgICAgICAgICAgICAgIGJyZWFrO1xuICAgICAgICAgICAgICAgIH1cbiAgICAgICAgICAgIH07XG4gICAgICAgICAgICAvKlxuICAgICAgICAgICAgIHdvcmtlciBtZXNzYWdlcyBhcmUgb25seSByZWNlaXZlZCB2aWEgV29ya2VyLm9ubWVzc2FnZSxcbiAgICAgICAgICAgICB3aGVyZWFzIGlmcmFtZSBtZXNzYWdlcyBhcmUgcmVjZWl2ZWQgdmlhIHdpbmRvdy5vbm1lc3NhZ2Ugb3IgaWZyYW1lLmNvbnRlbnRXaW5kb3cub25tZXNzYWdlLlxuICAgICAgICAgICAgIFNvIHdlIG5lZWQgdG8gaGFuZGxlIHdvcmtlcnMgYW5kIGlmcmFtZXMgZGlmZmVyZW50bHlcbiAgICAgICAgICAgICovXG4gICAgICAgICAgICAvLyBXb3JrZXJcbiAgICAgICAgICAgIGlmICh0aGlzLmluaXQudGFyZ2V0IGluc3RhbmNlb2YgV29ya2VyKSB7XG4gICAgICAgICAgICAgICAgaWYgKHRoaXMubG9ncylcbiAgICAgICAgICAgICAgICAgICAgY29uc29sZS5sb2coXCJMaXN0ZW5pbmcgb24gd29ya2VyIGZvciBtZXNzYWdlc1wiKTtcbiAgICAgICAgICAgICAgICB0aGlzLmluaXQudGFyZ2V0LmFkZEV2ZW50TGlzdGVuZXIoXCJtZXNzYWdlXCIsIG1lc3NhZ2VzTGlzdGVuZXIpO1xuICAgICAgICAgICAgfVxuICAgICAgICAgICAgLy8gSUZyYW1lXG4gICAgICAgICAgICBlbHNlIHtcbiAgICAgICAgICAgICAgICBpZiAodGhpcy5sb2dzKVxuICAgICAgICAgICAgICAgICAgICBjb25zb2xlLmxvZyhcIkxpc3RlbmluZyBvbiB3aW5kb3cgZm9yIG1lc3NhZ2VzXCIpO1xuICAgICAgICAgICAgICAgIHdpbmRvdy5hZGRFdmVudExpc3RlbmVyKFwibWVzc2FnZVwiLCBtZXNzYWdlc0xpc3RlbmVyKTtcbiAgICAgICAgICAgIH1cbiAgICAgICAgICAgIC8vIFBvc3QgbWV0YTpcbiAgICAgICAgICAgIC8vIC0gV29ya2VycyBuZWVkIHRoaXMgdG8gaW1wb3J0IHRoZSBtb2R1bGUgaW4gdGhlIHdvcmtlciBpbml0aWFsaXphdGlvbiwgd2hvaWNoIGR5bmFtaWNhbGx5IGltcG9ydHMgdGhlIG1vZHVsZVxuICAgICAgICAgICAgLy8gLSBJZnJhbWVzIG5lZWQgdGhpcyB0byBpbml0IHRoZWlyIG1ldGFcbiAgICAgICAgICAgIHRoaXMuaW5pdC50YXJnZXQucG9zdE1lc3NhZ2UoeyBfX3R5cGU6IFwibWV0YVwiLCBtZXRhOiB0aGlzLmluaXQubWV0YSB9LCB7IHRhcmdldE9yaWdpbjogXCIqXCIgfSk7IC8vIFRPRE8gdGFyZ2V0T3JpZ2luXG4gICAgICAgICAgICBzZXRUaW1lb3V0KCgpID0+IHtcbiAgICAgICAgICAgICAgICBpZiAoIXJlc29sdmVkKVxuICAgICAgICAgICAgICAgICAgICByZWplY3QodGhpcy5lcnIoXCJDb25uZWN0aW9uIHRpbWVvdXRcIiwgbnVsbCkpO1xuICAgICAgICAgICAgfSwgdGhpcy5vcHRpb25zLmNvbm5lY3Rpb25UaW1lb3V0IHx8IDUwMDApO1xuICAgICAgICB9KTtcbiAgICB9XG4gICAgZ2V0IHN0YXRlKCkge1xuICAgICAgICByZXR1cm4gdGhpcy5fc3RhdGU7XG4gICAgfVxuICAgIGdldCBtZXRhKCkge1xuICAgICAgICByZXR1cm4gdGhpcy5pbml0Lm1ldGE7XG4gICAgfVxuICAgIGVycihpbmZvLCBldmVudCkge1xuICAgICAgICBjb25zdCBtc2cgPSBldmVudCBpbnN0YW5jZW9mIEV2ZW50ID8gKGV2ZW50Lm1lc3NhZ2UgfHwgZXZlbnQuZGF0YSB8fCBcIlwiKS50b1N0cmluZygpIDogZXZlbnQgaW5zdGFuY2VvZiBFcnJvciA/IGV2ZW50Lm1lc3NhZ2UgOiBcIlwiO1xuICAgICAgICBjb25zdCBlcnIgPSBuZXcgRXJyb3IoYCR7aW5mb30ke21zZyA/IFwiOiBcIiArIG1zZyA6IFwiXCJ9YCk7XG4gICAgICAgIGNvbnNvbGUuZXJyb3IoaW5mbywgZXJyKTtcbiAgICAgICAgcmV0dXJuIGVycjtcbiAgICB9XG4gICAgcG9zdE1lc3NhZ2UodHlwZSwgZGF0YSwgdHJhbnNmZXIpIHtcbiAgICAgICAgdGhpcy5pbml0LnRhcmdldC5wb3N0TWVzc2FnZSh7IC4uLmRhdGEsIF9fdHlwZTogdHlwZSB9LCB7IHRyYW5zZmVyIH0pO1xuICAgIH1cbiAgICBhc3luYyBleGVjdXRlKG9wZXJhdGlvbiwgLi4uYXJncykge1xuICAgICAgICAvLyBUT0RPIFwiKlwiIG9yaWdpblxuICAgICAgICByZXR1cm4gYXdhaXQgcmVjZWl2ZURhdGEodGhpcy5pbml0LnRhcmdldCwgXCJvcGVyYXRpb25cIiwgeyBhcmdzLCBvcGVyYXRpb24gfSwgXCIqXCIsIFtdLCB0aGlzLm9wdGlvbnMub3BlcmF0aW9uVGltZW91dCk7XG4gICAgfVxuICAgIGFzeW5jIHB1c2hTdGF0ZShuZXdTdGF0ZSwgb3B0aW9ucykge1xuICAgICAgICB0aGlzLnBvc3RNZXNzYWdlKFwic3RhdGVfcHVzaFwiLCB7XG4gICAgICAgICAgICBzdGF0ZTogbmV3U3RhdGUsXG4gICAgICAgICAgICAvKiBTZXQgZXhwbGljaXRseSB0byBwcmV2ZW50IHVud2FudGVkIGRhdGEgZnJvbSBiZWluZyB0cmFuZHNmZXJlZCAqL1xuICAgICAgICAgICAgb3B0aW9uczogeyBtZXJnZTogISFvcHRpb25zPy5tZXJnZSB9LFxuICAgICAgICB9KTtcbiAgICB9XG4gICAgZGVzdHJveSgpIHtcbiAgICAgICAgaWYgKHRoaXMuaW5pdC50YXJnZXQgaW5zdGFuY2VvZiBXb3JrZXIpIHtcbiAgICAgICAgICAgIHRyeSB7XG4gICAgICAgICAgICAgICAgdGhpcy5pbml0LnRhcmdldC50ZXJtaW5hdGUoKTtcbiAgICAgICAgICAgIH1cbiAgICAgICAgICAgIGNhdGNoIChlcnIpIHsgfVxuICAgICAgICB9XG4gICAgICAgIHRoaXMuY2xlYXJMaXN0ZW5lcnMoKTtcbiAgICAgICAgdGhpcy5lbWl0RXZlbnQoXCJkZXN0cm95XCIsIHVuZGVmaW5lZCk7XG4gICAgfVxufVxuIiwiaW1wb3J0IHsgRXZlbnRzSGFuZGxlciB9IGZyb20gXCIuL0V2ZW50c0hhbmRsZXIuanNcIjtcbmltcG9ydCB7IEV4dGVuc2lvbiB9IGZyb20gXCIuL0V4dGVuc2lvbi5qc1wiO1xuZXhwb3J0IGNsYXNzIFByb3ZpZGVyIGV4dGVuZHMgRXZlbnRzSGFuZGxlciB7XG4gICAgY29uc3RydWN0b3Iob3B0aW9ucykge1xuICAgICAgICBzdXBlcigpO1xuICAgICAgICB0aGlzLm9wdGlvbnMgPSBvcHRpb25zO1xuICAgICAgICB0aGlzLmNhY2hlID0gbmV3IE1hcCgpO1xuICAgIH1cbiAgICBhc3luYyBsb2FkRXh0ZW5zaW9uKGV4dGVuc2lvbkluaXQpIHtcbiAgICAgICAgY29uc3QgZXh0ZW5zaW9uID0gbmV3IEV4dGVuc2lvbih0aGlzLCBleHRlbnNpb25Jbml0KTtcbiAgICAgICAgdHJ5IHtcbiAgICAgICAgICAgIGF3YWl0IGV4dGVuc2lvbi5zdGFydCgpO1xuICAgICAgICB9XG4gICAgICAgIGNhdGNoIChlcnIpIHtcbiAgICAgICAgICAgIHRocm93IG5ldyBFcnJvcihgRmFpbGVkIHRvIGxvYWQgZXh0ZW5zaW9uOiAke2Vycj8udG9TdHJpbmcoKX1gKTtcbiAgICAgICAgfVxuICAgICAgICAvLyBwcm9wYWdhdGUgZXZlbnRzXG4gICAgICAgIGV4dGVuc2lvbi5hZGRFdmVudExpc3RlbmVyKFwic3RhdGVfcG9wdWxhdGVcIiwgZSA9PiB7XG4gICAgICAgICAgICB0aGlzLmVtaXRFdmVudChcInN0YXRlX3BvcHVsYXRlXCIsIHsgZXh0ZW5zaW9uLCBtb2R1bGU6IGUucGF5bG9hZC5tb2R1bGUsIHN0YXRlOiBlLnBheWxvYWQuc3RhdGUsIG9wdGlvbnM6IGUucGF5bG9hZC5tb2R1bGUgfSk7XG4gICAgICAgIH0pO1xuICAgICAgICBleHRlbnNpb24uYWRkRXZlbnRMaXN0ZW5lcihudWxsLCBldiA9PiB7XG4gICAgICAgICAgICBpZiAoZXYudHlwZS5zdGFydHNXaXRoKFwib3A6XCIpKVxuICAgICAgICAgICAgICAgIHRoaXMuZW1pdEV2ZW50KGV2LnR5cGUsIGV2LnBheWxvYWQpO1xuICAgICAgICB9KTtcbiAgICAgICAgZXh0ZW5zaW9uLmFkZEV2ZW50TGlzdGVuZXIoXCJkZXN0cm95XCIsIGUgPT4ge1xuICAgICAgICAgICAgdGhpcy5jYWNoZS5kZWxldGUoZXh0ZW5zaW9uLmlkKTtcbiAgICAgICAgICAgIHRoaXMuZW1pdEV2ZW50KFwiZXh0ZW5zaW9uX2Rlc3Ryb3lcIiwgZXh0ZW5zaW9uKTtcbiAgICAgICAgfSk7XG4gICAgICAgIHRoaXMuZW1pdEV2ZW50KFwiZXh0ZW5zaW9uX2xvYWRcIiwgZXh0ZW5zaW9uKTtcbiAgICAgICAgLy8gY2FjaGVcbiAgICAgICAgdGhpcy5jYWNoZS5zZXQoZXh0ZW5zaW9uLmlkLCBleHRlbnNpb24pO1xuICAgICAgICByZXR1cm4gZXh0ZW5zaW9uO1xuICAgIH1cbiAgICBhbGxFeHRlbnNpb25zKCkge1xuICAgICAgICByZXR1cm4gQXJyYXkuZnJvbSh0aGlzLmNhY2hlLnZhbHVlcygpKTtcbiAgICB9XG4gICAgZ2V0RXh0ZW5zaW9uKGlkKSB7XG4gICAgICAgIHJldHVybiB0aGlzLmNhY2hlLmdldChpZCkgfHwgbnVsbDtcbiAgICB9XG4gICAgZGVzdHJveSgpIHtcbiAgICAgICAgY29uc3QgZXh0ZW5zaW9ucyA9IEFycmF5LmZyb20odGhpcy5jYWNoZS52YWx1ZXMoKSk7XG4gICAgICAgIGV4dGVuc2lvbnMuZm9yRWFjaChleHRlbnNpb24gPT4gZXh0ZW5zaW9uLmRlc3Ryb3koKSk7XG4gICAgICAgIHRoaXMuY2FjaGUuY2xlYXIoKTtcbiAgICB9XG59XG4iLCJleHBvcnQgeyBFeHRlbnNpb24gfSBmcm9tIFwiLi9FeHRlbnNpb24uanNcIjtcbmltcG9ydCB7IFByb3ZpZGVyIH0gZnJvbSBcIi4vUHJvdmlkZXIuanNcIjtcbmV4cG9ydCB7IEV2ZW50IH0gZnJvbSBcIi4vRXZlbnRzSGFuZGxlci5qc1wiO1xuZXhwb3J0IGRlZmF1bHQgUHJvdmlkZXI7XG4iLCJleHBvcnQgZnVuY3Rpb24gcmVsUGF0aChwYXRoKSB7XG4gICAgaWYgKHBhdGguc3RhcnRzV2l0aChcIi4vXCIpKVxuICAgICAgICBwYXRoID0gcGF0aC5zbGljZSgyKTtcbiAgICBlbHNlIGlmIChwYXRoLnN0YXJ0c1dpdGgoXCIvXCIpKVxuICAgICAgICBwYXRoID0gcGF0aC5zbGljZSgxKTtcbiAgICByZXR1cm4gcGF0aDtcbn1cbmV4cG9ydCBmdW5jdGlvbiBnZXRNZXNzYWdlRGF0YShlLCB0eXBlKSB7XG4gICAgaWYgKGUuZGF0YSAmJiB0eXBlb2YgZS5kYXRhID09PSBcIm9iamVjdFwiICYmIGUuZGF0YS5fX3R5cGUgPT09IHR5cGUpXG4gICAgICAgIHJldHVybiBlLmRhdGE7XG4gICAgcmV0dXJuIG51bGw7XG59XG4vKiogMjUgY2hhciBsb25nIHBzZXVkbyBjcnlwdGljIGlkICovXG5leHBvcnQgZnVuY3Rpb24gcmFuZG9tSWQoKSB7XG4gICAgY29uc3QgY2hhcnMgPSBcImFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6MDEyMzQ1Njc4OVwiO1xuICAgIGxldCB1bmlxdWVJZCA9IFwiXCI7XG4gICAgZm9yIChsZXQgaSA9IDA7IGkgPCAyNTsgaSsrKSB7XG4gICAgICAgIGNvbnN0IHJhbmRvbUluZGV4ID0gTWF0aC5mbG9vcihNYXRoLnJhbmRvbSgpICogY2hhcnMubGVuZ3RoKTtcbiAgICAgICAgdW5pcXVlSWQgKz0gY2hhcnNbcmFuZG9tSW5kZXhdO1xuICAgIH1cbiAgICByZXR1cm4gdW5pcXVlSWQ7XG59XG5leHBvcnQgY29uc3QgaXNCcm93c2VyID0gdHlwZW9mIHdpbmRvdyAhPT0gXCJ1bmRlZmluZWRcIiAmJiB3aW5kb3cgPT09IHdpbmRvdy5zZWxmO1xuLy8gVE9ETyBvcmlnaW5cbmV4cG9ydCBmdW5jdGlvbiBwb3N0VG9QYXJlbnQodHlwZSwgZGF0YSwgb3JpZ2luID0gXCIqXCIsIHRyYW5zZmVyKSB7XG4gICAgaWYgKGlzQnJvd3NlcilcbiAgICAgICAgd2luZG93LnBhcmVudC5wb3N0TWVzc2FnZSh7IC4uLmRhdGEsIF9fdHlwZTogdHlwZSB9LCBvcmlnaW4sIHRyYW5zZmVyIHx8IFtdKTtcbiAgICBlbHNlXG4gICAgICAgIHNlbGYucG9zdE1lc3NhZ2UoeyAuLi5kYXRhLCBfX3R5cGU6IHR5cGUgfSwgb3JpZ2luLCB0cmFuc2ZlciB8fCBbXSk7XG59XG5leHBvcnQgYXN5bmMgZnVuY3Rpb24gcmVjZWl2ZURhdGEodGFyZ2V0LCB0eXBlLCBkYXRhLCBvcmlnaW4gPSBcIipcIiwgdHJhbnNmZXIsIGVyclRpbWVvdXQgPSA1MDAwKSB7XG4gICAgcmV0dXJuIG5ldyBQcm9taXNlKChyZXNvbHZlLCByZWplY3QpID0+IHtcbiAgICAgICAgY29uc3QgY2hhbm5lbCA9IG5ldyBNZXNzYWdlQ2hhbm5lbCgpO1xuICAgICAgICBjb25zdCBvdXQgPSBjaGFubmVsLnBvcnQxO1xuICAgICAgICBjb25zdCBfaW4gPSBjaGFubmVsLnBvcnQyO1xuICAgICAgICBsZXQgcmVzb2x2ZWQgPSBmYWxzZTtcbiAgICAgICAgc2V0VGltZW91dCgoKSA9PiB7XG4gICAgICAgICAgICBpZiAoIXJlc29sdmVkKVxuICAgICAgICAgICAgICAgIHJlamVjdChuZXcgRXJyb3IoXCJPcGVyYXRpb24gdGltZW91dFwiKSk7XG4gICAgICAgIH0sIGVyclRpbWVvdXQgfHwgNTAwMCk7XG4gICAgICAgIG91dC5vbm1lc3NhZ2UgPSBhc3luYyAoZSkgPT4ge1xuICAgICAgICAgICAgY29uc3QgZGF0YSA9IGdldE1lc3NhZ2VEYXRhKGUsIHR5cGUgKyBcIjpyZXN1bHRcIik7XG4gICAgICAgICAgICBpZiAoZGF0YSkge1xuICAgICAgICAgICAgICAgIHJlc29sdmVkID0gdHJ1ZTtcbiAgICAgICAgICAgICAgICByZXNvbHZlKGRhdGEucGF5bG9hZCk7XG4gICAgICAgICAgICB9XG4gICAgICAgIH07XG4gICAgICAgIF9pbi5vbm1lc3NhZ2VlcnJvciA9IGUgPT4ge1xuICAgICAgICAgICAgcmVqZWN0KG5ldyBFcnJvcihcIkNoYW5uZWwgRXJyb3IgKGluKVwiKSk7XG4gICAgICAgIH07XG4gICAgICAgIG91dC5vbm1lc3NhZ2VlcnJvciA9IGUgPT4ge1xuICAgICAgICAgICAgcmVqZWN0KG5ldyBFcnJvcihcIkNoYW5uZWwgRXJyb3IgKG91dClcIikpO1xuICAgICAgICB9O1xuICAgICAgICBpZiAodGFyZ2V0IGluc3RhbmNlb2YgV29ya2VyKSB7XG4gICAgICAgICAgICB0YXJnZXQucG9zdE1lc3NhZ2UoeyAuLi5kYXRhLCBfX3R5cGU6IHR5cGUsIF9fcG9ydDogX2luIH0sIHsgdHJhbnNmZXI6IFtfaW4sIC4uLih0cmFuc2ZlciB8fCBbXSldIH0pO1xuICAgICAgICB9XG4gICAgICAgIGVsc2VcbiAgICAgICAgICAgIHRhcmdldC5wb3N0TWVzc2FnZSh7IC4uLmRhdGEsIF9fdHlwZTogdHlwZSwgX19wb3J0OiBfaW4gfSwgb3JpZ2luLCBbX2luLCAuLi4odHJhbnNmZXIgfHwgW10pXSk7XG4gICAgfSk7XG59XG4iLCIvLyBUaGUgbW9kdWxlIGNhY2hlXG52YXIgX193ZWJwYWNrX21vZHVsZV9jYWNoZV9fID0ge307XG5cbi8vIFRoZSByZXF1aXJlIGZ1bmN0aW9uXG5mdW5jdGlvbiBfX3dlYnBhY2tfcmVxdWlyZV9fKG1vZHVsZUlkKSB7XG5cdC8vIENoZWNrIGlmIG1vZHVsZSBpcyBpbiBjYWNoZVxuXHR2YXIgY2FjaGVkTW9kdWxlID0gX193ZWJwYWNrX21vZHVsZV9jYWNoZV9fW21vZHVsZUlkXTtcblx0aWYgKGNhY2hlZE1vZHVsZSAhPT0gdW5kZWZpbmVkKSB7XG5cdFx0cmV0dXJuIGNhY2hlZE1vZHVsZS5leHBvcnRzO1xuXHR9XG5cdC8vIENyZWF0ZSBhIG5ldyBtb2R1bGUgKGFuZCBwdXQgaXQgaW50byB0aGUgY2FjaGUpXG5cdHZhciBtb2R1bGUgPSBfX3dlYnBhY2tfbW9kdWxlX2NhY2hlX19bbW9kdWxlSWRdID0ge1xuXHRcdC8vIG5vIG1vZHVsZS5pZCBuZWVkZWRcblx0XHQvLyBubyBtb2R1bGUubG9hZGVkIG5lZWRlZFxuXHRcdGV4cG9ydHM6IHt9XG5cdH07XG5cblx0Ly8gRXhlY3V0ZSB0aGUgbW9kdWxlIGZ1bmN0aW9uXG5cdF9fd2VicGFja19tb2R1bGVzX19bbW9kdWxlSWRdKG1vZHVsZSwgbW9kdWxlLmV4cG9ydHMsIF9fd2VicGFja19yZXF1aXJlX18pO1xuXG5cdC8vIFJldHVybiB0aGUgZXhwb3J0cyBvZiB0aGUgbW9kdWxlXG5cdHJldHVybiBtb2R1bGUuZXhwb3J0cztcbn1cblxuIiwiLy8gZGVmaW5lIGdldHRlciBmdW5jdGlvbnMgZm9yIGhhcm1vbnkgZXhwb3J0c1xuX193ZWJwYWNrX3JlcXVpcmVfXy5kID0gKGV4cG9ydHMsIGRlZmluaXRpb24pID0+IHtcblx0Zm9yKHZhciBrZXkgaW4gZGVmaW5pdGlvbikge1xuXHRcdGlmKF9fd2VicGFja19yZXF1aXJlX18ubyhkZWZpbml0aW9uLCBrZXkpICYmICFfX3dlYnBhY2tfcmVxdWlyZV9fLm8oZXhwb3J0cywga2V5KSkge1xuXHRcdFx0T2JqZWN0LmRlZmluZVByb3BlcnR5KGV4cG9ydHMsIGtleSwgeyBlbnVtZXJhYmxlOiB0cnVlLCBnZXQ6IGRlZmluaXRpb25ba2V5XSB9KTtcblx0XHR9XG5cdH1cbn07IiwiX193ZWJwYWNrX3JlcXVpcmVfXy5vID0gKG9iaiwgcHJvcCkgPT4gKE9iamVjdC5wcm90b3R5cGUuaGFzT3duUHJvcGVydHkuY2FsbChvYmosIHByb3ApKSIsIi8vIGRlZmluZSBfX2VzTW9kdWxlIG9uIGV4cG9ydHNcbl9fd2VicGFja19yZXF1aXJlX18uciA9IChleHBvcnRzKSA9PiB7XG5cdGlmKHR5cGVvZiBTeW1ib2wgIT09ICd1bmRlZmluZWQnICYmIFN5bWJvbC50b1N0cmluZ1RhZykge1xuXHRcdE9iamVjdC5kZWZpbmVQcm9wZXJ0eShleHBvcnRzLCBTeW1ib2wudG9TdHJpbmdUYWcsIHsgdmFsdWU6ICdNb2R1bGUnIH0pO1xuXHR9XG5cdE9iamVjdC5kZWZpbmVQcm9wZXJ0eShleHBvcnRzLCAnX19lc01vZHVsZScsIHsgdmFsdWU6IHRydWUgfSk7XG59OyIsImltcG9ydCBQcm92aWRlciBmcm9tIFwiLi4vLi4vaW5kZXhcIjtcbm1haW4oKS5jYXRjaChlcnIgPT4gY29uc29sZS5lcnJvcihlcnIpKTtcbmNvbnN0IHByb3ZpZGVyQXBpID0ge1xuICAgIGVjaG86IHRleHQgPT4ge1xuICAgICAgICB0ZXh0ID0gdGV4dCB8fCBcIlwiO1xuICAgICAgICByZXR1cm4gdGV4dCArIFwiICBcIiArIHRleHQgKyBcIiAgXCIgKyB0ZXh0O1xuICAgIH0sXG4gICAgYWxlcnQ6IG1lc3NhZ2UgPT4ge1xuICAgICAgICBhbGVydChtZXNzYWdlIHx8IFwiPGVtcHR5PlwiKTtcbiAgICB9LFxuICAgIHByaW50OiAoLi4udGV4dCkgPT4ge1xuICAgICAgICBjb25zdCBjb250YWluZXIgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZChcInByaW50XCIpO1xuICAgICAgICBpZiAoY29udGFpbmVyKVxuICAgICAgICAgICAgY29uc29sZS5sb2coXCJQcmludDpcIiwgKHRleHQgfHwgW1wiPGVtcHR5PlwiXSkuam9pbihcIiBcIikpO1xuICAgIH0sXG4gICAgZ3JlZXQ6IChuYW1lLCBhZ2UpID0+IHtcbiAgICAgICAgYWxlcnQoXCJIZWxsbyBcIiArIG5hbWUgKyBcIiBBR0UgXCIgKyBhZ2UpO1xuICAgIH0sXG59O1xuYXN5bmMgZnVuY3Rpb24gbGF1bmNoSUZyYW1lcyhleHRlbnNpb24pIHtcbiAgICBjb25zdCBjb250YWluZXIgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZChcImlmcmFtZVwiKTtcbiAgICBjb25zdCBjb250YWluZXIyID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoXCJpZnJhbWUyXCIpO1xuICAgIGNvbnN0IHJlc2V0QnRuID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoXCJyZXNldFwiKTtcbiAgICBpZiAoY29udGFpbmVyICYmIGNvbnRhaW5lcjIgJiYgcmVzZXRCdG4pIHtcbiAgICAgICAgY29uc3QgY29tcG9uZW50TW9kdWxlID0gYXdhaXQgZXh0ZW5zaW9uLmxhdW5jaENvbXBvbmVudChjb250YWluZXIsIFwiZGlzdC9mcmFtZXMvY291bnRlci9pbmRleC5odG1sXCIsIHByb3ZpZGVyQXBpKTtcbiAgICAgICAgY29uc3QgY29tcG9uZW50TW9kdWxlMiA9IGF3YWl0IGV4dGVuc2lvbi5sYXVuY2hDb21wb25lbnQoY29udGFpbmVyMiwgXCJkaXN0L2ZyYW1lcy9jb3VudGVyL2luZGV4Lmh0bWxcIiwgcHJvdmlkZXJBcGkpO1xuICAgICAgICBzZXRJbnRlcnZhbChhc3luYyAoKSA9PiB7XG4gICAgICAgICAgICBjb25zdCBuZXdDb3VudGVyID0gYXdhaXQgY29tcG9uZW50TW9kdWxlLmV4ZWN1dGUoXCJpbmNyZW1lbnRcIik7XG4gICAgICAgICAgICBhd2FpdCBjb21wb25lbnRNb2R1bGUyLmV4ZWN1dGUoXCJpbmNyZW1lbnRcIik7XG4gICAgICAgICAgICBjb25zb2xlLmxvZyhgTmV3IGNvdW50ZXIgPCR7bmV3Q291bnRlcn0+IHJldHVybmVkIGJ5ICdpbmNyZW1lbnQnIGV4ZWN1dGUgKFNob3VsZCBhbHNvIGJlIGRpc3BsYXllZCBpbiB0aGUgaWZyYW1lKWApO1xuICAgICAgICB9LCA3MDAwKTtcbiAgICAgICAgcmVzZXRCdG4ub25jbGljayA9ICgpID0+IHtcbiAgICAgICAgICAgIGNvbXBvbmVudE1vZHVsZS5leGVjdXRlKFwicmVzZXRcIik7XG4gICAgICAgIH07XG4gICAgfVxufVxuYXN5bmMgZnVuY3Rpb24gbGF1bmNoTW9kdWxlKGV4dGVuc2lvbikge1xuICAgIGNvbnN0IG1vZHVsZSA9IGF3YWl0IGV4dGVuc2lvbi5sYXVuY2hNb2R1bGUoXCJkaXN0L21hdGguanNcIiwgcHJvdmlkZXJBcGkpO1xuICAgIGNvbnNvbGUubG9nKFwiTW9kdWxlIGxvYWRlZDpcIiwgZXh0ZW5zaW9uKTtcbiAgICBjb25zdCBvcGVyYXRpb25CdG4gPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZChcIm9wZXJhdGlvblwiKTtcbiAgICBpZiAob3BlcmF0aW9uQnRuKSB7XG4gICAgICAgIG9wZXJhdGlvbkJ0bi5vbmNsaWNrID0gYXN5bmMgKCkgPT4ge1xuICAgICAgICAgICAgaWYgKCFtb2R1bGUpXG4gICAgICAgICAgICAgICAgcmV0dXJuIGFsZXJ0KFwiTW9kdWxlIG5vdCBsb2FkZWRcIik7XG4gICAgICAgICAgICBjb25zdCBzdW0gPSBhd2FpdCBtb2R1bGUuZXhlY3V0ZShcImFkZFwiLCAxLCA1KTtcbiAgICAgICAgICAgIGNvbnN0IGQgPSBhd2FpdCBtb2R1bGUuZXhlY3V0ZShcInN1YnN0cmFjdFwiLCAxMCwgMik7XG4gICAgICAgICAgICBhbGVydChcIlN1bTogXCIgKyBzdW0gKyBcIiBTdWI6IFwiICsgZCk7XG4gICAgICAgIH07XG4gICAgfVxufVxuYXN5bmMgZnVuY3Rpb24gbWFpbigpIHtcbiAgICBhZGRFdmVudExpc3RlbmVyKFwibWVzc2FnZVwiLCBlID0+IHtcbiAgICAgICAgY29uc29sZS5sb2coXCJNZXNzYWdlIHJlY2VpdmVkIDo6XCIsIGUuZGF0YSk7XG4gICAgfSk7XG4gICAgY29uc3QgcHJvdiA9IG5ldyBQcm92aWRlcih7IGxvZ3M6IHRydWUgfSk7XG4gICAgY29uc3QgY29tbWl0U2hhID0gXCI1NDQ5N2U1N2JiOGRlN2NkNjUyMjJjMmZiNTk2ZDZmNzA0YzA5NGMwXCI7XG4gICAgY29uc3QgZXh0ZW5zaW9uID0gYXdhaXQgcHJvdi5sb2FkRXh0ZW5zaW9uKHtcbiAgICAgICAgdHlwZTogXCJnaXRodWJcIixcbiAgICAgICAgbmFtZTogXCJhbmRyZS1oY3R1bGMvZXh0ZW5zaW9ucnVubmVyLXRlc3QtZXh0ZW5zaW9uXCIsXG4gICAgICAgIHZlcnNpb246IGNvbW1pdFNoYSxcbiAgICB9KTtcbiAgICBjb25zb2xlLmxvZyhcIkV4dGVuc2lvbiBsb2FkZWQ6XCIsIGV4dGVuc2lvbik7XG4gICAgY29uc3QgaW5mbyA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKFwiaW5mb1wiKTtcbiAgICBpZiAoaW5mbylcbiAgICAgICAgaW5mby5pbm5lckhUTUwgPSBgJHtleHRlbnNpb24ucGtnLm5hbWV9QCR7ZXh0ZW5zaW9uLnBrZy52ZXJzaW9ufSBTSEEgJHtjb21taXRTaGF9YDtcbiAgICBjb25zdCBzdGF0ZUJ0biA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKFwic3RhdGVcIik7XG4gICAgbGV0IGNvdW50ZXIgPSAwO1xuICAgIGxhdW5jaElGcmFtZXMoZXh0ZW5zaW9uKS5jYXRjaChlcnIgPT4gY29uc29sZS5lcnJvcihcIkVycm9yIGxhdW5jaGluZyBpZnJhbWVcIiwgZXJyKSk7XG59XG4iXSwibmFtZXMiOltdLCJzb3VyY2VSb290IjoiIn0=</script>
     </head>
     <body>
         <h1>Test</h1>
@@ -155,10 +798,10 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpac
         <p id="info"></p>
         <h2>Module (dist/math.js)</h2>
         <button id="operation">Operation (add and substract)</button>
-        <button id="state">Push state</button>
-        <button id="event">Emit Event (shape_change)</button>
         <h2>IFrame (dist/frames/counter/index.html)</h2>
         <button id="increment">Counter increment</button>
         <div id="iframe"></div>
+        <div id="iframe2"></div>
+        <button id="reset">Reset counter (frame1)</button>
     </body>
 </html>

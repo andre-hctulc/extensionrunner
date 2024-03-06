@@ -9,10 +9,15 @@ export function getMessageData(e: MessageEvent, type: string): Record<string, an
     return null;
 }
 
+/** 25 char long pseudo cryptic id */
 export function randomId() {
-    const timestamp = new Date().getTime();
-    const random = Math.random().toString(36).substring(2, 9);
-    return `${timestamp}${random}`;
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let uniqueId = "";
+    for (let i = 0; i < 25; i++) {
+        const randomIndex = Math.floor(Math.random() * chars.length);
+        uniqueId += chars[randomIndex];
+    }
+    return uniqueId;
 }
 
 export const isBrowser = typeof window !== "undefined" && window === window.self;
@@ -59,18 +64,4 @@ export async function receiveData(
             target.postMessage({ ...data, __type: type, __port: _in }, { transfer: [_in, ...(transfer || [])] });
         } else target.postMessage({ ...data, __type: type, __port: _in }, origin, [_in, ...(transfer || [])]);
     });
-}
-
-export class Events<T extends string, L extends (...args: any) => void> {
-    #listeners = new Map<T, Set<L>>();
-    addEventListener(type: T, listener: L) {
-        if (!this.#listeners.has(type)) this.#listeners.set(type, new Set());
-        this.#listeners.get(type)?.add(listener);
-    }
-    removeEventListener(type: T, listener: L) {
-        this.#listeners.get(type)?.delete(listener);
-    }
-    protected notifyListeners(type: T, ...args: Parameters<L>) {
-        this.#listeners.get(type)?.forEach(listener => listener(...(args as any)));
-    }
 }

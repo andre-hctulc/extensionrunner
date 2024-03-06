@@ -10,9 +10,8 @@
         "moduleResolution": "node",
         "resolveJsonModule": true,
         "outDir": ".",
-        "declaration": true,
         "removeComments": true
     },
-    "include": ["src/worker.ts", "src/Adapter.ts", "src/shared.ts"],
+    "include": ["src/*.ts"],
     "exclude": ["node_modules"]
 }

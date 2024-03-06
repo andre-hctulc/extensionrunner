@@ -1,8 +1,10 @@
+import { Operations } from "./types.js";
 import { CorsWorker } from "./CorsWorker.js";
 import { Module } from "./Module.js";
 import type { Provider } from "./Provider.js";
-import { Events, randomId, relPath } from "./shared.js";
-import type { Meta, MetaExtension, Operations } from "./types.js";
+import { randomId, relPath } from "./shared.js";
+import type { Meta, MetaExtension, OperationEvents } from "./types.js";
+import { EventsHandler } from "./EventsHandler.js";
 
 export type ExtensionInit = {
     type: "github" | "npm";
@@ -10,7 +12,6 @@ export type ExtensionInit = {
     name: string;
     /** npm version */
     version: string;
-    onPushState?: (newState: any, source: Module<any, any, any>) => void;
     /**
      * Time in milliseconds to wait for a module operation to complete
      * @default 5000
@@ -39,12 +40,38 @@ export interface PackageJSON {
 
 const jsdelivr = "https://cdn.jsdelivr.net";
 
-export class Extension extends Events<string, (payload: any, module: Module<any, any, any>) => void> {
+interface ExtensionEvents extends OperationEvents<any> {
+    state_populate: { module: Module<any, any, any>; state: any; options: any };
+    module_load: Module<any, any, any>;
+    module_destroy: Module<any, any, any>;
+    destroy: undefined;
+}
+
+/** or logic */
+type ModuleFilter = {
+    id?: string | string[];
+    notId?: string | string[];
+    path?: string | string[];
+    notPath?: string | string[];
+    check?: (module: Module<any, any, any>) => boolean;
+    /** Use and logic instead of or */
+    and?: boolean;
+};
+
+interface ExtensionPushStateOptions {
+    filter?: ModuleFilter;
+    /** overwrite old states instead of merging */
+    overwrite?: boolean;
+}
+
+type ModuleCache = { instances: Map<string, Module<any, any, any>>; sharedState: any };
+
+export class Extension extends EventsHandler<ExtensionEvents> {
     readonly url: string = "";
     private _pkg: Partial<PackageJSON> = {};
     private started = false;
-    /** `<module_id, { instances: <Module, data>, sharedState: any }>` */
-    private cache = new Map<string, { instances: Map<Module<any, any, any>, { state?: { data: any } }>; sharedState: any }>();
+    /** `<path, { instances: <Module, data>, sharedState: any }>` */
+    private cache = new Map<string, ModuleCache>();
 
     constructor(readonly provider: Provider, private init: ExtensionInit) {
         super();
@@ -65,14 +92,39 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         this._pkg = JSON.parse(text);
     }
 
+    /** When the filter is empty no modules are returned */
+    filterModules(filter: ModuleFilter) {
+        const all = this.getAllModules();
+        const idsSet = new Set(Array.isArray(filter.id) ? filter.id : [filter.id]);
+        const notIdsSet = new Set(Array.isArray(filter.notId) ? filter.notId : [filter.notId]);
+        const pathsSet = new Set(Array.isArray(filter.path) ? filter.path : [filter.path]);
+        const notPathsSet = new Set(Array.isArray(filter.notPath) ? filter.notPath : [filter.notPath]);
+        return all.filter(module => {
+            let include = idsSet.has(module.id);
+            if (filter.notId && notIdsSet.has(module.id) && filter.and) include = false;
+            if (filter.path && !pathsSet.has(module.meta.path) && filter.and) include = false;
+            if (filter.notPath && notPathsSet.has(module.meta.path) && filter.and) include = false;
+
+            if (filter.check && !(filter.and && !include)) {
+                if (filter.check(module)) include = true;
+            }
+
+            return include;
+        });
+    }
+
+    getAllModules() {
+        return Array.from(this.cache.values()).flatMap(({ instances }) => Array.from(instances.values()));
+    }
+
     /**
      * @param path Use _null_ or empty string for the packages entry file
      */
-    async launchModule<I extends Operations<Module<I, O, S>>, O extends Operations<Module<I, O, S>>, S = any>(
+    async launchModule<O extends object, I extends object, S extends object = any>(
         path: string | null,
-        out: O,
+        out: Operations<Module<O, I, S>, O>,
         meta?: MetaExtension
-    ): Promise<Module<I, O, S>> {
+    ): Promise<Module<O, I, S>> {
         path = relPath(path || "");
         // IMP use correct npm version for the newest wroker build (extensionrunner@version)
         const corsWorker = new CorsWorker(jsdelivr + "/npm/extensionrunner@1.0.29/worker.js", { type: "module", name: `${this.init.name}:${path}` });
@@ -81,12 +133,12 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         return mod.start();
     }
 
-    async launchIFram<I extends Operations<Module<I, O, S>>, O extends Operations<Module<I, O, S>>, S = any>(
+    async launchComponent<O extends object, I extends object, S extends object = any>(
         parentElement: Element,
         path: string,
-        out: O,
+        out: Operations<Module<O, I, S>, O>,
         meta?: MetaExtension
-    ): Promise<Module<I, O, S>> {
+    ): Promise<Module<O, I, S>> {
         path = relPath(path);
 
         // Most CDNs do not directly serve html files, they serve the html as a string in a response. So does jsdelivr and unpkg.
@@ -110,10 +162,10 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         // TODOD more attrs?
 
         // wait for load
-        return new Promise<Module<I, O, S>>((resolve, reject) => {
+        return new Promise<Module<O, I, S>>((resolve, reject) => {
             iframe.onload = async e => {
                 if (!iframe.contentWindow) return reject("`contentWindow`ndow not defined");
-                const mod: Module<any, any, any> = this.initModule(iframe.contentWindow, origin, path, out, meta);
+                const mod: Module<O, I, S> = this.initModule(iframe.contentWindow, origin, path, out, meta);
                 resolve(mod.start());
             };
 
@@ -125,20 +177,20 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         });
     }
 
-    private initModule<I extends Operations<Module<I, O, S>>, O extends Operations<Module<I, O, S>>, S = any>(
+    private initModule<O extends object, I extends object, S extends object = {}>(
         target: Window | Worker,
         origin: string,
         path: string,
-        out: O,
+        out: Operations<Module<O, I, S>, O>,
         meta?: MetaExtension
-    ): Module<I, O, S> {
+    ): Module<O, I, S> {
         // genrate random id
 
         let _meta: Meta = {
             authToken: randomId(),
             name: this.init.name,
             path,
-            state: this.cache.get(path)?.sharedState,
+            initialState: this.cache.get(path)?.sharedState,
             version: this.init.version,
             type: this.init.type,
         };
@@ -148,16 +200,32 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
 
         // create module
 
-        const mod = new Module<I, O, S>(this, origin, target, _meta, out, {
-            onPushState: (newState, populate) => {
-                if (populate) this.pushState(path, newState, undefined, [mod]);
-                this.init.onPushState?.(newState, mod);
-            },
-            onEvent: (type, payload) => {
-                this.notifyListeners?.(type, payload, mod);
-            },
-            operationTimeout: this.init.operationTimeout,
-            connectionTimeout: this.init.connectionTimeout,
+        const mod = new Module<O, I, S>(
+            this,
+            { origin, target, meta: _meta, out },
+            {
+                operationTimeout: this.init.operationTimeout,
+                connectionTimeout: this.init.connectionTimeout,
+            }
+        );
+
+        // propagate events
+
+        mod.addEventListener(null, ev => {
+            if (ev.type.startsWith("op:")) this.emitEvent(ev.type as any, ev.payload as any);
+        });
+
+        mod.addEventListener("state_populate", ev => {
+            if (this.cache.has(path)) this.cache.get(path)!.sharedState = ev.payload;
+            this.filterModules({ path, notId: mod.id }).forEach(module => {
+                module.pushState(ev.payload, { merge: true });
+            });
+            this.emitEvent("state_populate", { module: mod, state: ev.payload.state, options: ev.payload.options });
+        });
+
+        mod.addEventListener("destroy", () => {
+            this.cache.get(path)?.instances.delete(mod.id);
+            this.emitEvent("module_destroy", mod);
         });
 
         // cache
@@ -167,7 +235,9 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
             instances = new Map();
             this.cache.set(path, { instances, sharedState: undefined });
         }
-        instances.set(mod, { state: undefined });
+        instances.set(mod.id, mod);
+
+        this.emitEvent("module_load", mod);
 
         return mod;
     }
@@ -202,28 +272,18 @@ export class Extension extends Events<string, (payload: any, module: Module<any,
         return response;
     }
 
-    pushState(moduleId: string, newState: any, instance?: Module<any, any, any>, exclude?: Module<any, any, any>[]) {
-        const exclSet = new Set(exclude);
-        const cache = this.cache.get(moduleId);
-        if (cache) {
-            if (instance) {
-                if (!exclSet.has(instance)) instance.pushState(newState);
-            } else {
-                const modules = Array.from(cache.instances.keys());
-                modules.forEach(instance => {
-                    if (!exclSet.has(instance)) instance.pushState(newState);
-                });
-            }
+    pushState(newState: any, options?: ExtensionPushStateOptions) {
+        const modules = options?.filter ? this.filterModules(options?.filter || {}) : this.getAllModules();
+        for (const module of modules) {
+            module.pushState(newState, { merge: !options?.overwrite });
         }
     }
 
-    emitEvent(type: string, payload: any, filter?: (moduleId: string, instance: Module<any, any, any>) => boolean) {
-        for (const moduleId of this.cache.keys()) {
-            const modules = Array.from(this.cache.get(moduleId)?.instances.keys() || []);
-            modules.forEach(instance => {
-                if (filter && !filter(moduleId, instance)) return;
-                instance.emitEvent(type as never, payload as never);
-            });
-        }
+    destroy() {
+        const all = this.getAllModules();
+        all.forEach(module => module.destroy());
+        this.cache.clear();
+        this.clearListeners();
+        this.emitEvent("destroy", undefined);
     }
 }

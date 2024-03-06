@@ -5,7 +5,7 @@ let started = false;
 const isNonEmptyStr = (s: any) => !!s && typeof s === "string";
 
 // First message must be the meta!
-self.onmessage = async e => {
+onmessage = async e => {
     if (started) return;
     started = true;
 
@@ -19,7 +19,7 @@ self.onmessage = async e => {
         if (!isNonEmptyStr(meta.path)) throw new Error("Invalid version");
 
         // init meta
-        (self as any).meta = meta;
+        globalThis.$ER = { meta, state: meta.initialState || {} };
 
         // import module (for side effects - imported modules should use `Adapter`)
         let importUrl: string;
