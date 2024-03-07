@@ -37,7 +37,11 @@ type ModuleInit<O extends object, I extends object, S extends object = {}> = {
 
 type ModuleEvents<I extends object> = {
     state_populate: {
-        /** New state */
+        /**
+         * Raw new state received from a module.
+         *
+         * Possibly modified by `ModuleInit.allowPopulateState`.
+         * */
         state: object;
         options: any;
     };
@@ -46,7 +50,7 @@ type ModuleEvents<I extends object> = {
     error: Error;
 } & OperationEvents<I>;
 
-export type ModulePushStateOptions = {
+export type PushStateOptions = {
     /** @default true */
     merge?: boolean;
 };
@@ -88,15 +92,16 @@ export class Module<O extends object, I extends object, S extends object = {}> e
 
                 switch (type) {
                     case "state_populate":
+                        let receivedState = e.data.state;
+
+                        if (!receivedState || typeof receivedState !== "object")
+                            return this.err("Invalid state received", e);
+
+                        const options = e.data.options || {};
                         let newState: any;
 
                         if (this.init.allowPopulateState) {
-                            const merge = !!e.data.options?.merge;
-                            let receivedState = e.data.state;
-
-                            if (!receivedState || typeof receivedState !== "object") {
-                                return this.err("Invalid state", e);
-                            }
+                            const merge = !!options.merge;
 
                             const allowed =
                                 this.init.allowPopulateState === true ||
@@ -106,21 +111,14 @@ export class Module<O extends object, I extends object, S extends object = {}> e
 
                             // state allowed but modified
                             if (typeof allowed === "object") receivedState = allowed;
-
-                            if (merge) {
-                                if (this.init.mergeStates)
-                                    newState = this.init.mergeStates(this.state, receivedState);
-                                else newState = { ...this.state, ...receivedState };
-                            } else newState = receivedState;
-                        } else return;
-
-                        // The state gets populated to every module with this path but this one if e.data.options.populate !== false
-                        // So we set the state of this module here. For the other modules its set in pushState
-                        this._state = newState;
+                            else newState = receivedState;
+                        } else {
+                            return;
+                        }
 
                         this.emitEvent("state_populate", {
                             state: newState,
-                            options: e.data.options || {},
+                            options,
                         } as any);
                         break;
                     case "operation":
@@ -245,23 +243,27 @@ export class Module<O extends object, I extends object, S extends object = {}> e
         );
     }
 
-    async pushState(newState: Partial<S>, options?: ModulePushStateOptions) {
+    async pushState(newState: Partial<S>, options?: PushStateOptions) {
         let s: Partial<S>;
 
-        if (options?.merge ?? false) {
+        if (options?.merge !== false) {
             if (this.init.mergeStates) {
                 s = this.init.mergeStates(this.state, newState);
             } else {
-                s = { ...this.state, ...newState } as S;
+                s = { ...this.state, ...newState };
             }
         } else s = newState;
 
-        this.postMessage("state_push", {
+        await this.postMessage("state_push", {
             state: s,
         });
 
+        // Set state for this module (push state success)
+        // Set state only here, so the state in the module is the same as here (the provider)
         this._state = s;
 
+        // return a complete state here
+        //  as the state in modules is overwritten in the adapter with the pushed state
         return s;
     }
 

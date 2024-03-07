@@ -71,8 +71,6 @@ export type AdapterInit<I extends object, O extends object, S extends object = {
      * @default 5000
      * */
     startTimeout?: number;
-    /** @default { ...oldState, ...newState } */
-    mergeStates?: (oldState: S | undefined, newState: S | undefined) => S;
 };
 
 export interface AdapterPushStateOptions {
@@ -86,7 +84,7 @@ export interface AdapterPushStateOptions {
 }
 
 type AdapterEvents<I extends object> = OperationEvents<I> & {
-    state_push: any;
+    state_update: any;
     load: undefined;
 };
 
@@ -114,14 +112,12 @@ export default class Adapter<
 
             switch (type) {
                 case "state_push":
-                    let newState: any;
-                    if (e.data.options) {
-                        if (this.init.mergeStates) newState = this.init.mergeStates(getState(), e.data.state);
-                        else newState = { ...getState(), ...e.data.state };
-                    } else newState = e.data.state;
+                    const newState = e.data.state;
+                    if (!newState || typeof newState !== "object") return;
+                    // Set state only here, so module and provider state are the in sync
                     setState(newState);
                     // DEBUG console.log("Received state_push", this.id, "New state:", this.state);
-                    this.emitEvent("state_push", e.data.state);
+                    this.emitEvent("state_update", e.data.state);
                     break;
                 case "operation":
                     const { args, operation, __port: port } = e.data;
@@ -243,6 +239,12 @@ export default class Adapter<
     }
 
     async pushState(newState: S | undefined, options?: AdapterPushStateOptions) {
+        /*
+        The state gets set, when the provider sends a state_push message back, 
+        so the states are in sync.
+        See state_push
+        */
+
         // DEBUG console.log("pushState", this.id, newState);
 
         postToParent(
@@ -255,8 +257,6 @@ export default class Adapter<
             },
             this.init.provider
         );
-
-        setState(newState);
     }
 
     /** If the response is not ok, the `Response` will be set on the thrown error (`Error.response`) */

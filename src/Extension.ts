@@ -1,6 +1,6 @@
 import { Operations } from "./types.js";
 import { CorsWorker } from "./CorsWorker.js";
-import { Module } from "./Module.js";
+import { Module, PushStateOptions } from "./Module.js";
 import type { Provider } from "./Provider.js";
 import { jsdelivr, loadFile, randomId, relPath } from "./shared.js";
 import type { Meta, MetaExtension, OperationEvents } from "./types.js";
@@ -60,15 +60,18 @@ type ModuleFilter = {
     notId?: string | string[];
 };
 
-interface ExtensionPushStateOptions {
+interface ExtensionPushStateOptions extends PushStateOptions {
     filter?: ModuleFilter;
-    /**
-     * @default true
-     */
-    merge?: boolean;
 }
 
-type ModuleCache = { instances: Map<string, Module<any, any, any>>; state: any };
+type ModuleCache = {
+    instances: Map<string, Module<any, any, any>>;
+    /**
+     * Shared state for modules with this path
+     * modules can still have s different state (Module.state)
+     * */
+    state: any;
+};
 
 interface LaunchModuleOptions<S extends object> {
     allowPopulateState?:
@@ -249,12 +252,21 @@ export class Extension extends EventsHandler<ExtensionEvents> {
         });
 
         mod.addEventListener("state_populate", async ev => {
-            if (ev.payload.options?.populate === false) return;
+            // The new state gets pushed back to modules with the same path or just to the module
+            // itself, base on populate option
 
-            if (this.cache.has(path)) this.cache.get(path)!.state = ev.payload;
+            const populate = ev.payload.options?.populate !== false;
+
+            if (populate) {
+                if (this.cache.has(path)) this.cache.get(path)!.state = ev.payload;
+                else this.cache.set(path, { instances: new Map(), state: ev.payload });
+            }
+
             const pushResults = await this.pushState(ev.payload.state, {
-                filter: { notId: mod.id, path: mod.meta.path },
+                filter: populate ? { path: mod.meta.path } : { id: mod.id },
+                merge: !!ev.payload.options?.merge,
             });
+
             this.emitEvent("state_populate", {
                 module: mod,
                 state: ev.payload.state,
@@ -306,7 +318,7 @@ export class Extension extends EventsHandler<ExtensionEvents> {
     async pushState(newState: any, options?: ExtensionPushStateOptions): Promise<ModuleActions> {
         return await this.forEachModule(
             module => {
-                module.pushState(newState, { merge: options?.merge ?? true });
+                module.pushState(newState, { merge: options?.merge !== false });
             },
             {
                 parallel: true,
@@ -356,7 +368,7 @@ export class Extension extends EventsHandler<ExtensionEvents> {
     }
 
     async destroy() {
-        const actions = await this.forEachModule(module => module.destroy());
+        const actions = await this.forEachModule(module => module.destroy(), { parallel: true });
         this.cache.clear();
         this.clearListeners();
         this.emitEvent("destroy", undefined);
