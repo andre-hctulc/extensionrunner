@@ -199,6 +199,17 @@ await extension.pushState(
 );
 // Module Level
 await module.pushState({
-    activeTab:
+    activeTab: "account",
 });
+
+// -- Adapter
+
+await adapter.pushState(
+    {
+        activeTab: "settings",
+    },
+    {
+        populate: true, // default: true
+    }
+);
 ```

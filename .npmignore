@@ -7,3 +7,4 @@ scripts
 .vscode
 .prettierrc
 .gitignore
+*.code-workspace

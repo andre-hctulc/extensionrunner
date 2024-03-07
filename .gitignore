@@ -7,3 +7,4 @@ Todo.md
 test-extension
 test/bundle
 .vscode
+*.code-workspace
