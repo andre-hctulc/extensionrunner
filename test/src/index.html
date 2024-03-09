@@ -2,17 +2,19 @@
 <html>
     <head>
         <title>Test web-extension</title>
-        <script src="index.ts" type="module"></script>
+        <script src="./index.ts" type="module"></script>
+        <link rel="stylesheet" href="index.css" />
     </head>
     <body>
+        <p style="color: red">Text-Extension expects provider to run at http://localhost:1234</p>
         <h1>Test</h1>
         <span>Test-Extension:</span>
         <p id="info"></p>
         <h2>Module (dist/math.js)</h2>
         <button id="operation">Operation (add and substract)</button>
-        <h2>IFrame (dist/frames/counter/index.html)</h2>
+        <h2>IFrame (dist/components/counter/index.html)</h2>
         <button id="increment">Counter increment</button>
-        <div style="display: flex; gap: 10px;">
+        <div style="display: flex; gap: 10px">
             <div id="iframe" style="height: 500px width: 500px;;"></div>
             <div id="iframe2" style="height: 500px width: 500px;;"></div>
         </div>

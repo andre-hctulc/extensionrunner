@@ -4,16 +4,12 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "build": "webpack --mode development",
-        "serve": "npx serve dist -p 3444",
-        "dev": "npm run build && npm run serve"
+        "build": "parcel build src/index.html",
+        "dev": "parcel src/index.html"
     },
     "author": "",
     "license": "ISC",
     "devDependencies": {
-        "html-bundler-webpack-plugin": "^3.5.5",
-        "ts-loader": "^9.5.1",
-        "webpack": "^5.90.3",
-        "webpack-cli": "^5.1.4"
+        "parcel": "^2.12.0"
     }
 }

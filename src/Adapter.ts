@@ -71,6 +71,7 @@ export type AdapterInit<I extends object, O extends object, S extends object = {
      * @default 5000
      * */
     startTimeout?: number;
+    errorOnUnauthorized?: boolean;
 };
 
 export interface AdapterPushStateOptions {
@@ -86,6 +87,7 @@ export interface AdapterPushStateOptions {
 type AdapterEvents<I extends object> = OperationEvents<I> & {
     state_update: any;
     load: undefined;
+    error: Error;
 };
 
 /** Extension adapter */
@@ -104,8 +106,12 @@ export default class Adapter<
     private listen() {
         // handle messages
         addEventListener("message", async e => {
-            if (e.origin !== this.init.provider) return;
-
+            // e.rotin="" -> origin self
+            if (e.origin !== "" && e.origin !== this.init.provider) {
+                if (this.init.errorOnUnauthorized)
+                    this.err("Unauthorized - Event origin and provider origin mismatch", undefined);
+                return;
+            }
             if (typeof e?.data?.__type !== "string") return;
 
             const type = e.data.__type;
@@ -113,7 +119,8 @@ export default class Adapter<
             switch (type) {
                 case "state_push":
                     const newState = e.data.state;
-                    if (!newState || typeof newState !== "object") return;
+                    if (!newState || typeof newState !== "object")
+                        return this.err("Invalid state received", e);
                     // Set state only here, so module and provider state are the in sync
                     setState(newState);
                     // DEBUG console.log("Received state_push", this.id, "New state:", this.state);
@@ -163,12 +170,12 @@ export default class Adapter<
         });
     }
 
-    private started = false;
+    private _started = false;
 
     async start(onStart?: (this: Adapter<I, O, S>, adapter: this) => void): Promise<this> {
-        if (this.started) return this;
+        if (this._started) return this;
 
-        this.started = true;
+        this._started = true;
 
         // Already initialzed? modules are initialized before the adapter can mount (module worker src/worker.ts)
         if (getMeta()) {
@@ -203,7 +210,7 @@ export default class Adapter<
         const m = getMeta();
         if (!m)
             throw new Error(
-                "Meta not defined. " + (this.started ? "(unexpected)" : "The adapter has not been started")
+                "Meta not defined. " + (this._started ? "(unexpected)" : "The adapter has not been started")
             );
         return m;
     }
@@ -221,6 +228,7 @@ export default class Adapter<
                 : "";
         const err = new Error(`${info}${msg ? ": " + msg : ""}`);
         console.error(info, err);
+        this.emitEvent("error", err as any);
         return err;
     }
 

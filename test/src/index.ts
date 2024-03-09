@@ -5,10 +5,10 @@ import type { Out as ModuleInterface } from "../../test-extension/src/modules/ma
 import type {
     Out as ComponentInterface,
     State as ComponentsState,
-} from "../../test-extension/src/frames/counter/counter.js";
+} from "../../test-extension/src/components/counter/counter.js";
 
 /** Commit sha of test extension */
-const commitSha = "e1b2eb07b6009931c9e8455c3461a3ca2ef0ac1f";
+const commitSha = "266f2d641ea21a86389884e0908b1fa5dfeba665";
 
 main().catch(err => console.error(err));
 
@@ -41,13 +41,13 @@ async function launchIFrames(extension: Extension) {
             ProviderInterface,
             ComponentInterface,
             ComponentsState
-        >(container, "dist/frames/counter/counter.html", providerApi, { allowPopulateState: true });
+        >(container, "dist/components/counter/index.html", providerApi, { allowPopulateState: true });
 
         const componentModule2 = await extension.launchComponent<
             ProviderInterface,
             ComponentInterface,
             ComponentsState
-        >(container2, "dist/frames/counter/counter.html", providerApi, { allowPopulateState: true });
+        >(container2, "dist/components/counter/index.html", providerApi, { allowPopulateState: true });
 
         setInterval(async () => {
             const newCounter = await componentModule.execute("increment");
@@ -66,7 +66,7 @@ async function launchIFrames(extension: Extension) {
 
 async function launchModule(extension: Extension) {
     const module = await extension.launchModule<ProviderInterface, ModuleInterface>(
-        "dist/math.js",
+        "dist/modules/math.js",
         providerApi
     );
 

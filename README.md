@@ -9,9 +9,9 @@ to power external extensions safely in your App via Web Workers and IFrames dire
 
 ## Features
 
--   Fetch files assets from extensions
 -   Import modules from extensions
 -   Display components from extensions
+-   Fetch files from extensions
 -   Shared state between modules and components
 
 ## Usage
@@ -43,7 +43,8 @@ const providerApi = {
 
 const module = await extension.launchModule("modules/module.js", providerApi, {
     // Deactivated by default
-    allowPopulateState: (state, oldState) => true, // or return new state
+    allowPopulateState: (state, merge, module) => true, // or return new state
+    initialState: {}
 });
 
 document.getElementById("echo_btn").onclick=()=>{
@@ -59,7 +60,7 @@ document.getElementById("print_btn").onclick=()=>{
 
 // `launchComponent` returns the same type as `launchModule`
 const module = await extension.launchComponent("components/component.html", providerApi, {
-    allowPopulateState: () => true,
+    allowPopulateState: true,
 });
 
 setInterval(async ()=>{
