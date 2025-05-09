@@ -1,41 +1,58 @@
 // Meta
 
-/** module augmentation */
-export interface Meta<S = any> {
+/**
+ *  module augmentation
+ * */
+export interface Meta {
     authToken: string;
     name: string;
     path: string;
-    initialState: S | undefined;
     version: string;
     type: "github" | "npm";
+    windowType: "iframe" | "worker";
+    initialState: any;
+    data?: any;
 }
 
-export type MetaExtension = (meta: Meta) => Meta;
 
 // Operations
 
 export type Operations<This, I extends object> = {
-    [K in keyof I]: I[K] extends (...args: infer A) => infer R ? (this: This, ...args: A) => R : never;
+    [K in keyof I]: I[K] extends (...args: infer A) => infer R
+        ? (this: This, ...args: A) => Awaited<R> | Promise<R>
+        : never;
 };
-export type OperationName<I extends object> = Extract<keyof Operations<any, I>, string>;
-export type OperationResult<I extends object, O extends OperationName<I>> = I[O] extends (...args: any) => any ? ReturnType<I[O]> : never;
-export type OperationArgs<I extends object, O extends OperationName<I>> = I[O] extends (...args: infer A) => any ? A : never;
-export type OperationEvents<I extends object> = {
-    [O in OperationName<I> as `op:${O}`]: {
-        args: OperationArgs<I, O>;
-        result: OperationResult<I, O> | undefined;
-        error: Error | null;
+
+export type OperationName<This, I extends object> = string & keyof Operations<This, I>;
+
+export type OperationResult<This, I extends object, O extends OperationName<This, I>> = I[O] extends (
+    ...args: any
+) => any
+    ? Awaited<ReturnType<I[O]>>
+    : never;
+
+export type OperationArgs<This, I extends object, O extends OperationName<This, I>> = I[O] extends (
+    ...args: infer A
+) => any
+    ? A
+    : never;
+
+export type OperationEventPayload<I extends object, O extends OperationName<any, I>> = {
+    operation: O;
+    args: OperationArgs<any, I, O>;
+    result: OperationResult<any, I, O> | undefined;
+    error: unknown;
+};
+
+/** module augmentation */
+export interface PackageJSON {
+    /** npm package name or github owner ans repository name (":owner/:repo") */
+    name: string;
+    version: string;
+    description: string;
+    main: string;
+    scripts: {
+        [key: string]: string;
     };
-};
-
-/* 
-Test Types: 
-*/
-
-interface TestInterface {
-    x: (arg1: Node, arg2: XMLHttpRequest) => void;
-    event_load: (x: string, ds: number) => void;
+    keywords: string[];
 }
-
-let operations: Operations<any, TestInterface>;
-let evs: OperationEvents<TestInterface>;

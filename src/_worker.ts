@@ -1,4 +1,4 @@
-import type { Meta } from "./types";
+import type { Meta } from "./types.js";
 
 /*
 Module Worker:
@@ -8,6 +8,7 @@ Imports entry point of modules
 let started = false;
 
 const isNonEmptyStr = (s: any) => !!s && typeof s === "string";
+const glob: Record<string, any> = globalThis || {};
 
 // First message must be the meta!
 onmessage = async e => {
@@ -24,7 +25,7 @@ onmessage = async e => {
         if (!isNonEmptyStr(meta.path)) throw new Error("Invalid version");
 
         // init meta
-        globalThis.$ER = { meta, state: meta.initialState || {} };
+        glob.$ER = { meta, state: meta.initialState || {} };
 
         // import module (for side effects - imported modules should use `Adapter`)
         let importUrl: string;

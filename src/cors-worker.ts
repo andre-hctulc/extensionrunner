@@ -4,19 +4,16 @@ Source: https://github.com/webpack/webpack/discussions/14648
 Browsers do not support CORS for web workers (but they should?). This is a workaround to load a script from a different origin.
 */
 
-type CorsWorkerOptions = {
-    type?: "module" | "classic";
-    name?: string;
-};
+import { ERError } from "./error.js";
 
 export class CorsWorker {
-    private _worker: Worker | undefined;
+    private _worker: Worker | null = null;
 
-    constructor(readonly url: string, private options?: CorsWorkerOptions) {}
+    constructor(readonly url: string, private options?: WorkerOptions) {}
 
     private inited = false;
 
-    async init() {
+    async mount() {
         if (this.inited) return this;
 
         this.inited = true;
@@ -30,16 +27,16 @@ export class CorsWorker {
                     type: "application/javascript",
                 })
             );
-            this._worker = new Worker(objectURL, { type: this.options?.type, name: this.options?.name });
+            this._worker = new Worker(objectURL, this.options);
+            URL.revokeObjectURL(objectURL);
         } catch (err) {
-            throw new Error("Failed to create worker");
+            throw new ERError("Failed to create cors worker", [], { cause: err });
         }
 
-        return this;
+        return this._worker;
     }
 
-    get worker() {
-        if (!this._worker) throw new Error("CorsWorker did not start properly");
+    getWorker() {
         return this._worker;
     }
 }

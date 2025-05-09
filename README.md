@@ -2,8 +2,6 @@
 
 **This package is currently under development**
 
-Clone or fork the GitHub repo for now: [extensionrunner](https://github.com/andre-hctulc/extensionrunner)
-
 _extensionrunner_ uses CDNs (jsdelivr, githack, unpkg),
 to power external extensions safely in your App via Web Workers and IFrames directly from GitHub or npm.
 
@@ -79,24 +77,29 @@ document.getElementById("change_increment_by_btn").onclick= () => {
 _\<github_or_npm\>/modules/module.js_
 
 ```ts
-import Adapter from "extensionrunner/adapter";
+import { Adapter } from "extensionrunner/adapter";
 
-const adapterApi = {
-    echo: text => {
-        return text;
-    },
-    print: (...text) => {
-        console.log(...text);
-    },
-};
+class MyAdapter extends Adapter {
+    constructor(){
+        super({
+            provider: "https://example.com",
+        })
+    }
 
-new Adapter({
-    provider: "https://example.com",
-    out: adapterApi,
-}).start(async adapter => {
-    adapter.execute("alert", "module running...");
-    console.log("The sum of 40 and 2 is", await adapter.execute("sum", 2, 40));
-});
+    onStart() {
+        console.log("Started")
+        this.execute("alert", "Module running...");
+    }
+
+    out: {
+        echo: text => {
+            return text;
+        },
+        print: (...text) => {
+            console.log(...text);
+        },
+    }
+}
 ```
 
 _\<github_or_npm\>/components/component.html_

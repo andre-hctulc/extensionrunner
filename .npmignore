@@ -8,3 +8,5 @@ scripts
 .prettierrc
 .gitignore
 *.code-workspace
+dev
+Todo.md

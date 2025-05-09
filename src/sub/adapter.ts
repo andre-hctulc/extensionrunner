@@ -1,13 +1,14 @@
-import { EventsHandler } from "./EventsHandler.js";
-import { getMessageData, isBrowser, loadFile, randomId, receiveData } from "./shared.js";
+import { ERError } from "../error.js";
+import { EventsHandler } from "../events-handler.js";
+import { getMessageData, isBrowser, loadFile, LogLevel, logVerbose, receiveData } from "../shared.js";
 import type {
     Meta,
     OperationName,
     OperationArgs,
     Operations,
-    OperationEvents,
     OperationResult,
-} from "./types.js";
+    OperationEventPayload,
+} from "../types.js";
 
 /*
 Runs in Worker/IFrame
@@ -34,22 +35,24 @@ const metaListener: (e: MessageEvent) => void = (e: MessageEvent) => {
 
 addEventListener("message", metaListener);
 
+const glob: Record<string, any> = globalThis || {};
+
 function getMeta() {
-    return globalThis.$ER?.meta;
+    return glob.$ER?.meta;
 }
 
 function getState() {
-    return globalThis.$ER?.state || {};
+    return glob.$ER?.state || {};
 }
 
 function setMeta(newMeta: any) {
-    if (!globalThis.$ER) globalThis.$ER = {};
-    globalThis.$ER.meta = newMeta;
+    if (!glob.$ER) glob.$ER = {};
+    glob.$ER.meta = newMeta;
 }
 
 function setState(newState: any) {
-    if (!globalThis.$ER) globalThis.$ER = {};
-    globalThis.$ER.state = newState || {};
+    if (!glob.$ER) glob.$ER = {};
+    glob.$ER.state = newState || {};
 }
 
 export function postToParent(type: string, data: object, origin: string, transfer?: Transferable[]) {
@@ -57,10 +60,9 @@ export function postToParent(type: string, data: object, origin: string, transfe
     else self.postMessage({ ...data, __type: type }, origin, transfer || []);
 }
 
-export type AdapterInit<I extends object, O extends object, S extends object = {}> = {
+export type AdapterInit<S extends object = {}> = {
     /** URL, origin of the provider app */
     provider: string;
-    out: Partial<Operations<Adapter<I, O, S>, O>>;
     /**
      * Max time to wait for operation result
      */
@@ -71,7 +73,7 @@ export type AdapterInit<I extends object, O extends object, S extends object = {
      * @default 5000
      * */
     startTimeout?: number;
-    errorOnUnauthorized?: boolean;
+    logLevel?: LogLevel;
 };
 
 export interface AdapterPushStateOptions {
@@ -84,32 +86,41 @@ export interface AdapterPushStateOptions {
     merge?: boolean;
 }
 
-type AdapterEvents<I extends object> = OperationEvents<I> & {
-    state_update: any;
-    load: undefined;
-    error: Error;
+type AdapterEvents<O extends object, S extends object> = {
+    state_update: { state: S };
+    /**
+     * Provider called an operation
+     */
+    operation: OperationEventPayload<O, OperationName<any, O>>;
+    error: { error: unknown };
+    start: undefined;
+    destroy: undefined;
 };
 
 /** Extension adapter */
-export default class Adapter<
+export abstract class Adapter<
     I extends object,
-    O extends object = {},
-    S extends object = {}
-> extends EventsHandler<AdapterEvents<O>> {
-    readonly id = "adapter_id:" + randomId();
+    O extends object = object,
+    S extends object = object
+> extends EventsHandler<AdapterEvents<O, S>> {
+    readonly id = crypto.randomUUID();
+    private _logLevel: LogLevel;
 
-    constructor(readonly init: AdapterInit<I, O, S>) {
+    constructor(readonly init: AdapterInit<S>) {
         super();
-        this.listen();
+        this._listen();
+        this._logLevel = init?.logLevel || "error";
     }
 
-    private listen() {
+    private _listen() {
         // handle messages
         addEventListener("message", async e => {
-            // e.rotin="" -> origin self
+            // DEBUG console.log("Adapter received message event:", e, "Meta:", this.meta, "init:", this.init);
+
+            // origin will be "" for modules, as the import worker is dynamically created (See ./CorsWorker.ts)
+            // e.origin="" -> origin self
             if (e.origin !== "" && e.origin !== this.init.provider) {
-                if (this.init.errorOnUnauthorized)
-                    this.err("Unauthorized - Event origin and provider origin mismatch", undefined);
+                this._err("Unauthorized - Event origin and provider origin mismatch", undefined);
                 return;
             }
             if (typeof e?.data?.__type !== "string") return;
@@ -117,53 +128,62 @@ export default class Adapter<
             const type = e.data.__type;
 
             switch (type) {
+                case "destroy":
+                    this._emit("destroy", undefined);
+                    logVerbose(this._logLevel, "Adapter destroyed");
+                    this.onDestroy?.();
+                    break;
+
                 case "state_push":
                     const newState = e.data.state;
-                    if (!newState || typeof newState !== "object")
-                        return this.err("Invalid state received", e);
+                    if (!newState || typeof newState !== "object") {
+                        return this._err("Invalid state received", new ERError("State not found"));
+                    }
+                    logVerbose(this._logLevel, "State push received: ", newState);
                     // Set state only here, so module and provider state are the in sync
                     setState(newState);
-                    // DEBUG console.log("Received state_push", this.id, "New state:", this.state);
-                    this.emitEvent("state_update", e.data.state);
+                    this._emit("state_update", { state: e.data.state });
                     break;
+
                 case "operation":
                     const { args, operation, __port: port } = e.data;
 
-                    if (!port) return this.err("Operation Channel Error", "Port not found");
+                    if (!port) return this._err("Operation Channel Error", new ERError("Port not found"));
 
-                    let op = await (this.init.out as any)?.[operation];
-                    if (typeof op !== "function") op = null;
                     (port as MessagePort).onmessageerror = e => {
-                        this.err("Operation Channel Error", e);
+                        this._err("Operation Channel Error", new ERError("Operation Channel Error"));
                     };
 
-                    if (op) {
-                        try {
-                            const result = await op.apply(this, args);
-                            (port as MessagePort).postMessage({
-                                __type: "operation:result",
-                                payload: result,
-                            });
-                            this.emitEvent(`op:${operation}`, {
-                                args,
-                                result,
-                                error: null,
-                            } as any);
-                        } catch (err) {
-                            const error = this.err("Operation Execution Error", err);
-                            this.emitEvent(`op:${operation}`, {
-                                args,
-                                result: undefined,
-                                error,
-                            } as any);
-                            return;
-                        }
-                    } else
-                        this.emitEvent(`op:${operation}`, {
+                    try {
+                        const result = await this.execute(operation, ...args);
+                        (port as MessagePort).postMessage({
+                            __type: "operation:result",
+                            payload: result,
+                        });
+                        logVerbose(this._logLevel, "Executed remotely called operation '", operation, "'");
+                        this._emit("operation", {
+                            args,
+                            result,
+                            error: null,
+                            operation,
+                        });
+                    } catch (err) {
+                        logVerbose(
+                            this._logLevel,
+                            "Remote execution error at operation '",
+                            operation,
+                            "': ",
+                            err
+                        );
+                        this._err("Operation Execution Error", err);
+                        this._emit("operation", {
                             args,
                             result: undefined,
-                            error: null,
-                        } as any);
+                            error: err,
+                            operation,
+                        });
+                        return;
+                    }
 
                     break;
             }
@@ -172,14 +192,13 @@ export default class Adapter<
 
     private _started = false;
 
-    async start(onStart?: (this: Adapter<I, O, S>, adapter: this) => void): Promise<this> {
+    async start(): Promise<this> {
         if (this._started) return this;
 
         this._started = true;
 
-        // Already initialzed? modules are initialized before the adapter can mount (module worker src/worker.ts)
+        // Already initialized? modules are initialized before the adapter can mount (module worker src/worker.ts)
         if (getMeta()) {
-            if (onStart) onStart.apply(this, [this]);
             return this;
         }
 
@@ -197,14 +216,29 @@ export default class Adapter<
                 const d = getMessageData(e, "meta");
                 if (d && !resolved) {
                     resolved = true;
-                    if (onStart) onStart.apply(this, [this]);
+                    this.onStart?.();
+                    this._emit("start", undefined);
+                    logVerbose(this._logLevel, "Adapter started");
                     resolve(this);
                 }
             });
         });
     }
 
-    // API
+    private _err(info: string, error: unknown) {
+        console.error(info, error);
+        this._emit("error", { error });
+    }
+
+    // #### Abstract ####
+
+    abstract out: Partial<Operations<this, O>>;
+
+    // Lifecycle
+    onStart?(): void;
+    onDestroy?(): void;
+
+    // #### API ####
 
     get meta(): Meta {
         const m = getMeta();
@@ -219,23 +253,23 @@ export default class Adapter<
         return getState();
     }
 
-    protected err(info: string, event: Event | unknown) {
-        const msg =
-            event instanceof Event
-                ? ((event as any).message || (event as any).data || "").toString()
-                : event instanceof Error
-                ? event.message
-                : "";
-        const err = new Error(`${info}${msg ? ": " + msg : ""}`);
-        console.error(info, err);
-        this.emitEvent("error", err as any);
-        return err;
+    async execute<T extends OperationName<this, O>>(
+        operation: T,
+        ...args: OperationArgs<this, O, T>
+    ): Promise<OperationResult<this, O, T>> {
+        const op = await this.out?.[operation];
+
+        if (typeof op !== "function") {
+            throw new ERError(`Operation '${operation}' not found`, ["not_found"]);
+        }
+
+        return op.apply(this, args) as any;
     }
 
-    async execute<T extends OperationName<I>>(
+    async remoteExecute<T extends OperationName<this, I>>(
         operation: T,
-        ...args: OperationArgs<I, T>
-    ): Promise<OperationResult<I, T>> {
+        ...args: OperationArgs<this, I, T>
+    ): Promise<OperationResult<this, I, T>> {
         return await receiveData(
             isBrowser ? parent : self,
             "operation",
@@ -256,10 +290,10 @@ export default class Adapter<
         // DEBUG console.log("pushState", this.id, newState);
 
         postToParent(
-            "state_populate",
+            "push_state",
             {
                 state: newState,
-                /* Set props explicitly to prevent unwanted data from being trandsfered */
+                /* Set props explicitly to prevent unwanted data from being transferred */
                 options: { merge: !options?.merge, populate: options?.populate !== false },
                 __token: this.meta.authToken,
             },
