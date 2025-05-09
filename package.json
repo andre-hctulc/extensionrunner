@@ -10,8 +10,8 @@
         "build": "echo worker && tsc --project worker.tsconfig.json && echo browser && tsc --project browser.tsconfig.json"
     },
     "exports": {
-        "./adapter": "./sub/adapter.js",
-        ".": "./index.js"
+        "./adapter": "./dist/sub/adapter.js",
+        ".": "./dist/index.js"
     },
     "repository": {
         "url": "https://github.com/andre-hctulc/extensionrunner",
