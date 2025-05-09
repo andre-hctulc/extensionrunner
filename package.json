@@ -2,6 +2,31 @@
     "name": "@dre44/extensionrunner",
     "version": "0.0.1",
     "description": "Import extensions safely, directly from npm or github",
+    "main": "index.js",
+    "scripts": {
+        "clear": "rm -rf *.{js,d.ts}",
+        "tc": "echo worker && tsc --project worker.tsconfig.json --noEmit && echo browser && tsc --project browser.tsconfig.json --noEmit",
+        "prebuild": "rm -rf dist",
+        "build": "echo worker && tsc --project worker.tsconfig.json && echo browser && tsc --project browser.tsconfig.json"
+    },
+    "exports": {
+        "./adapter": "./sub/adapter.js",
+        ".": "./index.js"
+    },
+    "repository": {
+        "url": "https://github.com/andre-hctulc/extensionrunner",
+        "type": "git"
+    },
+    "author": "André Thomas",
+    "type": "module",
+    "license": "MIT",
+    "dependencies": {},
+    "devDependencies": {
+        "html-bundler-webpack-plugin": "^3.5.5",
+        "webpack": "^5.90.3",
+        "typescript": "^5.3.3",
+        "webpack-cli": "^5.1.4"
+    },
     "keywords": [
         "import",
         "module",
@@ -12,28 +37,5 @@
         "component",
         "worker",
         "iframe"
-    ],
-    "scripts": {
-        "clear": "rm -rf *.{js,d.ts}",
-        "tc": "echo worker && tsc --project worker.tsconfig.json --noEmit && echo browser && tsc --project browser.tsconfig.json --noEmit"
-    },
-    "repository": {
-        "url": "https://github.com/andre-hctulc/extensionrunner",
-        "type": "git"
-    },
-    "author": "André Thomas",
-    "type": "module",
-    "license": "MIT",
-    "main": "index.js",
-    "exports": {
-        "./adapter": "./sub/adapter.js",
-        ".": "./index.js"
-    },
-    "devDependencies": {
-        "html-bundler-webpack-plugin": "^3.5.5",
-        "webpack": "^5.90.3",
-        "typescript": "^5.3.3",
-        "webpack-cli": "^5.1.4"
-    },
-    "dependencies": {}
+    ]
 }

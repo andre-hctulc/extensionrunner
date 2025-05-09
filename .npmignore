@@ -2,11 +2,12 @@ test
 test-extension
 src
 *.tsconfig.json
+tsconfig.json
 webpack.config.mjs
 scripts
 .vscode
 .prettierrc
 .gitignore
 *.code-workspace
-dev
+docs
 Todo.md

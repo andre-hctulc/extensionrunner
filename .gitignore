@@ -8,3 +8,4 @@ test-extension
 test/bundle
 .vscode
 *.code-workspace
+dist
