@@ -1,10 +1,11 @@
-import { Operations } from "../types.js";
+import { OperationEventPayload, Operations } from "../operations.js";
 import { CorsWorker } from "../cors-worker.js";
 import { AnyModule, Module, ModuleInit } from "./module.js";
 import { getUrl, JS_DELIVR_URL, loadFile, logInfo, LogLevel, relPath } from "../shared.js";
-import type { Meta, OperationEventPayload, PackageJSON } from "../types.js";
+import type { PackageJSON } from "../types.js";
 import { EventsHandler } from "../events-handler.js";
 import { Provider } from "./provider.js";
+import { Meta } from "../meta.js";
 
 export type ExtensionInit = {
     type: "github" | "npm";
@@ -114,7 +115,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
         const notIdsSet = new Set(Array.isArray(filter.notId) ? filter.notId : [filter.notId]);
         const pathsSet = new Set(Array.isArray(filter.path) ? filter.path : [filter.path]);
         const notPathsSet = new Set(Array.isArray(filter.notPath) ? filter.notPath : [filter.notPath]);
-        return all.filter(module => {
+        return all.filter((module) => {
             let include = idsSet.has(module.id) || pathsSet.has(module.meta.path) || !!filter.check?.(module);
             if (include && notIdsSet.size && notIdsSet.has(module.id)) include = false;
             if (include && notPathsSet.size && notPathsSet.has(module.meta.path)) include = false;
@@ -185,7 +186,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
 
         // wait for load
         return new Promise<AnyModule>((resolve, reject) => {
-            iframe.onload = async e => {
+            iframe.onload = async (e) => {
                 if (!iframe.contentWindow) return reject("`contentWindow` not defined");
                 const mod: Module<this, O, I, MS> = this._initModule(
                     iframe.contentWindow,
@@ -199,7 +200,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
                 resolve(mod.start());
             };
 
-            iframe.addEventListener("error", e => {
+            iframe.addEventListener("error", (e) => {
                 reject(new Error(e.message));
             });
 
@@ -244,16 +245,16 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
             origin,
             target,
             meta: meta,
-            out,
+            operations: out,
         });
 
         // propagate events
 
-        mod.addEventListener("operation", ev => {
+        mod.addEventListener("operation", (ev) => {
             this._emit("operation", { module: mod, ...ev.payload });
         });
 
-        mod.addEventListener("push_state", async ev => {
+        mod.addEventListener("push_state", async (ev) => {
             this._emit("push_state", {
                 module: mod,
                 state: ev.payload.state as any,
@@ -264,7 +265,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
             this._emit("module_destroy", { module: mod });
         });
 
-        mod.addEventListener("error", ev => {
+        mod.addEventListener("error", (ev) => {
             this._emit("error", { error: ev.payload.error, module: mod });
         });
 
@@ -307,7 +308,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
 
     async pushState(newState: S): Promise<ModulesSummary> {
         return await this.forEachModule(
-            module => {
+            (module) => {
                 module.pushState(newState);
             },
             {
@@ -325,7 +326,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
 
         if (options?.parallel) {
             const par: { error: unknown | null; result: any; module: AnyModule }[] = await Promise.all(
-                modules.map(async module => {
+                modules.map(async (module) => {
                     try {
                         return { error: null, result: await callback(module), module };
                     } catch (err) {
@@ -333,7 +334,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
                     }
                 })
             );
-            par.forEach(p => {
+            par.forEach((p) => {
                 if (p.error) {
                     result.failed.push(p.module);
                     result.errors.push(p.error);
@@ -358,7 +359,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
 
     async destroy() {
         const allModules = this.getAllModules();
-        const actions = await this.forEachModule(module => module.destroy(), { parallel: true });
+        const actions = await this.forEachModule((module) => module.destroy(), { parallel: true });
         this._cache.clear();
         this._clearListener();
         this._emit("destroy", { modules: allModules });

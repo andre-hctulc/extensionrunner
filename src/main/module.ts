@@ -2,27 +2,27 @@ import { EventsHandler } from "../events-handler.js";
 import { Extension } from "./extension.js";
 import { logVerbose, logError, logInfo, LogLevel, receiveData } from "../shared.js";
 import type {
-    Meta,
     OperationArgs,
     OperationEventPayload,
     OperationName,
     OperationResult,
     Operations,
-} from "../types.js";
+} from "../operations.js";
 import { ERError } from "../error.js";
 import { StateOptions } from "../state.js";
+import { Meta } from "../meta.js";
 
 /**
  * @template E Extension
- * @template O Output interface
+ * @template I In interface
  * @template S State
  * */
-export type ModuleInit<E extends Extension, O extends object, S extends object = {}> = {
+export type ModuleInit<E extends Extension, I extends object, S extends object = {}> = {
     origin: string;
     target: Window | Worker;
     meta: Meta;
     stateOptions?: StateOptions<S>;
-    out: Partial<Operations<E, O>>;
+    operations: Partial<Operations<E, I>>;
     /**
      * Max time to wait for module to connect
      * @default 5000
@@ -63,11 +63,11 @@ type ModuleEvents<O extends object, S extends object> = {
 };
 
 /**
- * Represents an iframe or a worker
+ * Represents an iframe or a worker.
  *
  * @template E Extension
- * @template O Output interface
- * @template I Input interface
+ * @template I Input interface (local)
+ * @template O Output interface (remote)
  * @template S State
  * */
 export class Module<
@@ -78,9 +78,9 @@ export class Module<
 > extends EventsHandler<ModuleEvents<O, S>> {
     readonly id = crypto.randomUUID();
     private _logLevel: LogLevel;
-    private _init: ModuleInit<E, O, S>;
+    private _init: ModuleInit<E, I, S>;
 
-    constructor(readonly extension: E, init: ModuleInit<E, O, S>) {
+    constructor(readonly extension: E, init: ModuleInit<E, I, S>) {
         super();
         this._init = init;
         this._logLevel = this._init.logLevel || "error";
@@ -107,7 +107,7 @@ export class Module<
 
             let resolved = false;
 
-            const messagesListener: (e: MessageEvent) => void = async e => {
+            const messagesListener: (e: MessageEvent) => void = async (e) => {
                 // origin = "" -> same origin
                 if (e.origin !== "" && e.origin !== this._init.origin) return;
                 if (e.data?.__token !== this.meta.authToken) return;
@@ -146,7 +146,7 @@ export class Module<
                             return this._err("Operation Channel Error", "Port not found");
                         }
 
-                        (port as MessagePort).onmessageerror = e => {
+                        (port as MessagePort).onmessageerror = (e) => {
                             this._err("Operation Channel Error", e);
                         };
 
@@ -254,10 +254,23 @@ export class Module<
         return this._init.meta;
     }
 
-    async remoteExecute<T extends OperationName<E, I>>(
+    async execute<T extends OperationName<E, I>>(
         operation: T,
         ...args: OperationArgs<E, I, T>
-    ): Promise<OperationArgs<E, I, T>> {
+    ): Promise<OperationResult<E, I, T>> {
+        const op = this._init.operations?.[operation];
+
+        if (typeof op !== "function") {
+            throw new ERError(`Operation '${operation}' not found`, ["not_found"]);
+        }
+
+        return op.apply(this.extension, args) as any;
+    }
+
+    async remoteExecute<T extends OperationName<E, O>>(
+        operation: T,
+        ...args: OperationArgs<E, O, T>
+    ): Promise<OperationArgs<E, O, T>> {
         return await receiveData(
             this._init.target,
             "operation",
@@ -266,19 +279,6 @@ export class Module<
             [],
             this._init.operationTimeout
         );
-    }
-
-    async execute<T extends OperationName<E, O>>(
-        operation: T,
-        ...args: OperationArgs<E, O, T>
-    ): Promise<OperationResult<E, O, T>> {
-        const op = this._init.out?.[operation];
-
-        if (typeof op !== "function") {
-            throw new ERError(`Operation '${operation}' not found`, ["not_found"]);
-        }
-
-        return op.apply(this.extension, args) as any;
     }
 
     async pushState(newState: S) {

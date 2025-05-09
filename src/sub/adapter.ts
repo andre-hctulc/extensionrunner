@@ -2,13 +2,13 @@ import { ERError } from "../error.js";
 import { EventsHandler } from "../events-handler.js";
 import { getMessageData, isBrowser, loadFile, LogLevel, logVerbose, receiveData } from "../shared.js";
 import type {
-    Meta,
     OperationName,
     OperationArgs,
     Operations,
     OperationResult,
     OperationEventPayload,
-} from "../types.js";
+} from "../operations.js";
+import { Meta } from "../meta.js";
 
 /*
 Runs in Worker/IFrame
@@ -97,7 +97,13 @@ type AdapterEvents<O extends object, S extends object> = {
     destroy: undefined;
 };
 
-/** Extension adapter */
+/** 
+ * Extension Adapter.
+ * 
+ * @template I Input interface (local)
+ * @template O Output interface (remote)
+ * @template S State
+ * */
 export abstract class Adapter<
     I extends object,
     O extends object = object,
@@ -114,7 +120,7 @@ export abstract class Adapter<
 
     private _listen() {
         // handle messages
-        addEventListener("message", async e => {
+        addEventListener("message", async (e) => {
             // DEBUG console.log("Adapter received message event:", e, "Meta:", this.meta, "init:", this.init);
 
             // origin will be "" for modules, as the import worker is dynamically created (See ./CorsWorker.ts)
@@ -150,7 +156,7 @@ export abstract class Adapter<
 
                     if (!port) return this._err("Operation Channel Error", new ERError("Port not found"));
 
-                    (port as MessagePort).onmessageerror = e => {
+                    (port as MessagePort).onmessageerror = (e) => {
                         this._err("Operation Channel Error", new ERError("Operation Channel Error"));
                     };
 
@@ -212,7 +218,7 @@ export abstract class Adapter<
             }, this.init.startTimeout || 5000);
 
             // await meta init (the meta init listener is defined globally, so it is guaranteed to be called before)
-            addEventListener("message", e => {
+            addEventListener("message", (e) => {
                 const d = getMessageData(e, "meta");
                 if (d && !resolved) {
                     resolved = true;
@@ -232,7 +238,7 @@ export abstract class Adapter<
 
     // #### Abstract ####
 
-    abstract out: Partial<Operations<this, O>>;
+    abstract out: Partial<Operations<this, I>>;
 
     // Lifecycle
     onStart?(): void;
@@ -253,10 +259,10 @@ export abstract class Adapter<
         return getState();
     }
 
-    async execute<T extends OperationName<this, O>>(
+    async execute<T extends OperationName<this, I>>(
         operation: T,
-        ...args: OperationArgs<this, O, T>
-    ): Promise<OperationResult<this, O, T>> {
+        ...args: OperationArgs<this, I, T>
+    ): Promise<OperationResult<this, I, T>> {
         const op = await this.out?.[operation];
 
         if (typeof op !== "function") {
@@ -266,10 +272,10 @@ export abstract class Adapter<
         return op.apply(this, args) as any;
     }
 
-    async remoteExecute<T extends OperationName<this, I>>(
+    async remoteExecute<T extends OperationName<this, O>>(
         operation: T,
-        ...args: OperationArgs<this, I, T>
-    ): Promise<OperationResult<this, I, T>> {
+        ...args: OperationArgs<this, O, T>
+    ): Promise<OperationResult<this, O, T>> {
         return await receiveData(
             isBrowser ? parent : self,
             "operation",

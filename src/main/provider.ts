@@ -1,6 +1,6 @@
 import { EventsHandler } from "../events-handler.js";
 import { LogLevel } from "../shared.js";
-import { OperationEventPayload, OperationName } from "../types.js";
+import { OperationEventPayload, OperationName } from "../operations.js";
 import type { ExtensionInit } from "./extension.js";
 import { Extension } from "./extension.js";
 import type { Module } from "./module.js";
@@ -73,7 +73,7 @@ export class Provider extends EventsHandler<ProviderEvents> {
         this._emit("extension_load", { extension });
         // cache
         this.cache.set(extension.id, extension);
-        
+
         return extension;
     }
 
