@@ -4,10 +4,10 @@ import { AnyModule, Module, ModuleInit } from "./module.js";
 import { getUrl, JS_DELIVR_URL, loadFile, logInfo, LogLevel, relPath } from "../shared.js";
 import type { PackageJSON } from "../types.js";
 import { EventsHandler } from "../events-handler.js";
-import { Provider } from "./provider.js";
+import { Runner } from "./runner.js";
 import { Meta } from "../meta.js";
 
-export type ExtensionInit = {
+export type ExtensionAdapterInit = {
     type: "github" | "npm";
     /** npm package name or git repo (:username/:repo)*/
     name: string;
@@ -33,7 +33,7 @@ interface ModulesEventPayload {
     modules: AnyModule[];
 }
 
-interface ExtensionEvents<S extends object = object> {
+interface AdapterEvents<S extends object = any> {
     push_state: ModuleEventPayload & {
         state: S;
     };
@@ -62,7 +62,7 @@ type ModuleCache = {
     state: any;
 };
 
-export interface LaunchModuleOptions<O extends object = object, S extends object = object> {
+export interface LaunchModuleOptions<O extends object = object, S extends object = any> {
     /**
      * Modify the default module meta
      */
@@ -80,16 +80,16 @@ export type ModulesSummary<T = void> = {
 /**
  * @template S Module State
  */
-export class Extension<S extends object = any> extends EventsHandler<ExtensionEvents<S>> {
+export class ExtensionAdapter<S extends object = any> extends EventsHandler<AdapterEvents<S>> {
     readonly url: string = "";
     private _pkg: Partial<PackageJSON> = {};
     private started = false;
     /** `<path, { instances: <Module, data>, sharedState: any }>` */
     private _cache = new Map<string, ModuleCache>();
     private _logLevel: LogLevel;
-    private _init: ExtensionInit;
+    private _init: ExtensionAdapterInit;
 
-    constructor(readonly provider: Provider, init: ExtensionInit) {
+    constructor(readonly runner: Runner, init: ExtensionAdapterInit) {
         super();
         this._init = init;
         this._logLevel = init.logLevel || "error";
@@ -128,7 +128,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
      */
     async launchModule<O extends object, I extends object, MS extends object = S>(
         path: string | null,
-        out: Partial<Operations<Extension, O>>,
+        out: Partial<Operations<ExtensionAdapter, O>>,
         options?: LaunchModuleOptions<O, MS>
     ): Promise<Module<O, I, MS>> {
         path = relPath(path || "");
@@ -155,7 +155,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
     async launchComponent<O extends object, I extends object, MS extends object = S>(
         parentElement: Element,
         path: string,
-        out: Partial<Operations<Extension, O>>,
+        out: Partial<Operations<ExtensionAdapter, O>>,
         options?: LaunchModuleOptions<O, MS>
     ): Promise<Module<O, I, MS>> {
         path = relPath(path);
@@ -209,7 +209,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
         origin: string,
         path: string,
         windowType: "iframe" | "worker",
-        out: Partial<Operations<Extension, any>>,
+        out: Partial<Operations<ExtensionAdapter, any>>,
         options: LaunchModuleOptions
     ): AnyModule {
         // create meta

@@ -60,7 +60,7 @@ export function postToParent(type: string, data: object, origin: string, transfe
     else self.postMessage({ ...data, __type: type }, origin, transfer || []);
 }
 
-export type AdapterInit<S extends object = {}> = {
+export type ExtensionInit<S extends object = {}> = {
     /** URL, origin of the provider app */
     provider: string;
     /**
@@ -76,7 +76,7 @@ export type AdapterInit<S extends object = {}> = {
     logLevel?: LogLevel;
 };
 
-export interface AdapterPushStateOptions {
+export interface ExtensionPushStateOptions {
     /** @default true */
     populate?: boolean;
     /**
@@ -86,7 +86,7 @@ export interface AdapterPushStateOptions {
     merge?: boolean;
 }
 
-type AdapterEvents<O extends object, S extends object> = {
+type ExtensionEvents<O extends object, S extends object> = {
     state_update: { state: S };
     /**
      * Provider called an operation
@@ -104,15 +104,15 @@ type AdapterEvents<O extends object, S extends object> = {
  * @template O Output interface (remote)
  * @template S State
  * */
-export abstract class Adapter<
+export abstract class Extension<
     I extends object = object,
     O extends object = object,
     S extends object = object
-> extends EventsHandler<AdapterEvents<O, S>> {
+> extends EventsHandler<ExtensionEvents<O, S>> {
     readonly id = crypto.randomUUID();
     private _logLevel: LogLevel;
 
-    constructor(readonly init: AdapterInit<S>) {
+    constructor(readonly init: ExtensionInit<S>) {
         super();
         this._listen();
         this._logLevel = init?.logLevel || "error";
@@ -286,7 +286,7 @@ export abstract class Adapter<
         );
     }
 
-    async pushState(newState: S | undefined, options?: AdapterPushStateOptions) {
+    async pushState(newState: S | undefined, options?: ExtensionPushStateOptions) {
         /*
         The state gets set, when the provider sends a state_push message back, 
         so the states are in sync.

@@ -1,5 +1,5 @@
 import { EventsHandler } from "../events-handler.js";
-import { Extension } from "./extension.js";
+import { ExtensionAdapter } from "./extension-adapter.js";
 import { logVerbose, logError, logInfo, LogLevel, receiveData } from "../shared.js";
 import type {
     OperationArgs,
@@ -21,7 +21,7 @@ export type ModuleInit<I extends object = object, S extends object = object> = {
     target: Window | Worker;
     meta: Meta;
     stateOptions?: StateOptions<S>;
-    operations: Partial<Operations<Extension, I>>;
+    operations: Partial<Operations<ExtensionAdapter, I>>;
     /**
      * Max time to wait for module to connect
      * @default 5000
@@ -68,14 +68,16 @@ type ModuleEvents<O extends object, S extends object> = {
  * @template O Output interface (remote)
  * @template S State
  * */
-export class Module<O extends object, I extends object, S extends object = {}> extends EventsHandler<
-    ModuleEvents<O, S>
-> {
+export class Module<
+    O extends object = object,
+    I extends object = object,
+    S extends object = any
+> extends EventsHandler<ModuleEvents<O, S>> {
     readonly id = crypto.randomUUID();
     private _logLevel: LogLevel;
     private _init: ModuleInit<I, S>;
 
-    constructor(readonly extension: Extension, init: ModuleInit<I, S>) {
+    constructor(readonly adapter: ExtensionAdapter, init: ModuleInit<I, S>) {
         super();
         this._init = init;
         this._logLevel = this._init.logLevel || "error";
@@ -85,7 +87,7 @@ export class Module<O extends object, I extends object, S extends object = {}> e
     }
 
     get ref() {
-        return `${this.extension.name}/${this._init.meta.path}`;
+        return `${this.adapter.name}/${this._init.meta.path}`;
     }
 
     private started = false;
@@ -249,23 +251,23 @@ export class Module<O extends object, I extends object, S extends object = {}> e
         return this._init.meta;
     }
 
-    async execute<T extends OperationName<Extension, I>>(
+    async execute<T extends OperationName<ExtensionAdapter, I>>(
         operation: T,
-        ...args: OperationArgs<Extension, I, T>
-    ): Promise<OperationResult<Extension, I, T>> {
+        ...args: OperationArgs<ExtensionAdapter, I, T>
+    ): Promise<OperationResult<ExtensionAdapter, I, T>> {
         const op = this._init.operations?.[operation];
 
         if (typeof op !== "function") {
             throw new ERError(`Operation '${operation}' not found`, ["not_found"]);
         }
 
-        return op.apply(this.extension, args) as any;
+        return op.apply(this.adapter, args) as any;
     }
 
-    async remoteExecute<T extends OperationName<Extension, O>>(
+    async remoteExecute<T extends OperationName<ExtensionAdapter, O>>(
         operation: T,
-        ...args: OperationArgs<Extension, O, T>
-    ): Promise<OperationArgs<Extension, O, T>> {
+        ...args: OperationArgs<ExtensionAdapter, O, T>
+    ): Promise<OperationArgs<ExtensionAdapter, O, T>> {
         return await receiveData(
             this._init.target,
             "operation",

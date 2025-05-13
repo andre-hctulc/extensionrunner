@@ -1,23 +1,23 @@
 import { EventsHandler } from "../events-handler.js";
 import { LogLevel } from "../shared.js";
 import { OperationEventPayload, OperationName } from "../operations.js";
-import type { ExtensionInit } from "./extension.js";
-import { Extension } from "./extension.js";
+import type { ExtensionAdapterInit } from "./extension-adapter.js";
+import { ExtensionAdapter } from "./extension-adapter.js";
 import type { Module } from "./module.js";
 
-interface ProviderInit {
+interface RunnerInit {
     /**
      * @default "error"
      */
     logLevel?: LogLevel;
-    baseExtensionInit?: Partial<ExtensionInit>;
+    baseExtensionInit?: Partial<ExtensionAdapterInit>;
 }
 
 interface ExtensionEventPayload {
-    extension: Extension;
+    extension: ExtensionAdapter;
 }
 
-interface ProviderEvents {
+interface RunnerEvents {
     extension_load: ExtensionEventPayload;
     extension_destroy: ExtensionEventPayload;
     push_state: ExtensionEventPayload & { state: any; options: any; module: Module<any, any, any> };
@@ -25,20 +25,20 @@ interface ProviderEvents {
     error: ExtensionEventPayload & { error: unknown };
 }
 
-export class Provider extends EventsHandler<ProviderEvents> {
+export class Runner extends EventsHandler<RunnerEvents> {
     private _logLevel: LogLevel;
-    private _init: ProviderInit;
+    private _init: RunnerInit;
 
-    constructor(init: ProviderInit) {
+    constructor(init: RunnerInit) {
         super();
         this._init = init;
         this._logLevel = init?.logLevel || "error";
     }
 
-    private cache = new Map<string, Extension>();
+    private cache = new Map<string, ExtensionAdapter>();
 
-    async loadExtension(extensionInit: ExtensionInit) {
-        const extension = new Extension(this, {
+    async loadExtension(extensionInit: ExtensionAdapterInit) {
+        const extension = new ExtensionAdapter(this, {
             logLevel: this._logLevel,
             ...this._init.baseExtensionInit,
             ...extensionInit,
@@ -49,7 +49,7 @@ export class Provider extends EventsHandler<ProviderEvents> {
             throw new Error(`Failed to load extension: ${err?.toString()}`);
         }
         // propagate events
-        extension.addEventListener("push_state", e => {
+        extension.addEventListener("push_state", (e) => {
             this._emit("push_state", {
                 extension,
                 module: e.payload.module,
@@ -57,17 +57,17 @@ export class Provider extends EventsHandler<ProviderEvents> {
                 options: e.payload.module,
             });
         });
-        extension.addEventListener("operation", ev => {
+        extension.addEventListener("operation", (ev) => {
             this._emit("operation", {
                 extension,
                 ...ev.payload,
             });
         });
-        extension.addEventListener("destroy", e => {
+        extension.addEventListener("destroy", (e) => {
             this.cache.delete(extension.id);
             this._emit("extension_destroy", { extension });
         });
-        extension.addEventListener("error", e => {
+        extension.addEventListener("error", (e) => {
             this._emit("error", { extension, error: e.payload.error });
         });
         this._emit("extension_load", { extension });
@@ -87,7 +87,7 @@ export class Provider extends EventsHandler<ProviderEvents> {
 
     destroy() {
         const extensions = Array.from(this.cache.values());
-        extensions.forEach(extension => extension.destroy());
+        extensions.forEach((extension) => extension.destroy());
         this.cache.clear();
     }
 }
