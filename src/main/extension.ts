@@ -22,7 +22,7 @@ export type ExtensionInit = {
      * Defaults to provider's log level.
      */
     logLevel?: LogLevel;
-    baseModuleInit?: Partial<ModuleInit<any, any, any>>;
+    baseModuleInit?: Partial<ModuleInit<any, any>>;
 };
 
 interface ModuleEventPayload {
@@ -33,7 +33,7 @@ interface ModulesEventPayload {
     modules: AnyModule[];
 }
 
-interface ExtensionEvents<S extends object> {
+interface ExtensionEvents<S extends object = object> {
     push_state: ModuleEventPayload & {
         state: S;
     };
@@ -62,16 +62,12 @@ type ModuleCache = {
     state: any;
 };
 
-export interface LaunchModuleOptions<
-    E extends Extension = Extension,
-    O extends object = object,
-    S extends object = object
-> {
+export interface LaunchModuleOptions<O extends object = object, S extends object = object> {
     /**
      * Modify the default module meta
      */
     modifyMeta?: (defaultMeta: Meta) => Meta;
-    moduleInit?: Partial<ModuleInit<E, O, S>>;
+    moduleInit?: Partial<ModuleInit<O, S>>;
 }
 
 export type ModulesSummary<T = void> = {
@@ -132,9 +128,9 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
      */
     async launchModule<O extends object, I extends object, MS extends object = S>(
         path: string | null,
-        out: Partial<Operations<this, O>>,
-        options?: LaunchModuleOptions<this, O, MS>
-    ): Promise<Module<this, O, I, MS>> {
+        out: Partial<Operations<Extension, O>>,
+        options?: LaunchModuleOptions<O, MS>
+    ): Promise<Module<O, I, MS>> {
         path = relPath(path || "");
         /* ???? // important: use correct npm version for the newest worker build (extensionrunner@version) */
         const corsWorker = new CorsWorker(
@@ -159,9 +155,9 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
     async launchComponent<O extends object, I extends object, MS extends object = S>(
         parentElement: Element,
         path: string,
-        out: Partial<Operations<this, O>>,
-        options?: LaunchModuleOptions<this, O, MS>
-    ): Promise<Module<this, O, I, MS>> {
+        out: Partial<Operations<Extension, O>>,
+        options?: LaunchModuleOptions<O, MS>
+    ): Promise<Module<O, I, MS>> {
         path = relPath(path);
 
         // Most CDNs do not directly serve html files, they serve the html as a string in a response. So does jsdelivr and unpkg.
@@ -188,7 +184,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
         return new Promise<AnyModule>((resolve, reject) => {
             iframe.onload = async (e) => {
                 if (!iframe.contentWindow) return reject("`contentWindow` not defined");
-                const mod: Module<this, O, I, MS> = this._initModule(
+                const mod: Module<O, I, MS> = this._initModule(
                     iframe.contentWindow,
                     origin,
                     path,
@@ -213,7 +209,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
         origin: string,
         path: string,
         windowType: "iframe" | "worker",
-        out: Partial<Operations<this, any>>,
+        out: Partial<Operations<Extension, any>>,
         options: LaunchModuleOptions
     ): AnyModule {
         // create meta
@@ -240,6 +236,7 @@ export class Extension<S extends object = any> extends EventsHandler<ExtensionEv
         // create module
 
         const mod: AnyModule = new Module(this, {
+            logLevel: this._logLevel,
             ...this._init.baseModuleInit,
             ...options.moduleInit,
             origin,

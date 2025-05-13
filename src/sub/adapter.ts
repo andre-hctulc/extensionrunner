@@ -97,15 +97,15 @@ type AdapterEvents<O extends object, S extends object> = {
     destroy: undefined;
 };
 
-/** 
+/**
  * Extension Adapter.
- * 
+ *
  * @template I Input interface (local)
  * @template O Output interface (remote)
  * @template S State
  * */
 export abstract class Adapter<
-    I extends object,
+    I extends object = object,
     O extends object = object,
     S extends object = object
 > extends EventsHandler<AdapterEvents<O, S>> {
@@ -121,7 +121,7 @@ export abstract class Adapter<
     private _listen() {
         // handle messages
         addEventListener("message", async (e) => {
-            // DEBUG console.log("Adapter received message event:", e, "Meta:", this.meta, "init:", this.init);
+            logVerbose(this._logLevel, "Adapter received message event:", e);
 
             // origin will be "" for modules, as the import worker is dynamically created (See ./CorsWorker.ts)
             // e.origin="" -> origin self
@@ -238,7 +238,7 @@ export abstract class Adapter<
 
     // #### Abstract ####
 
-    abstract out: Partial<Operations<this, I>>;
+    abstract operations: Partial<Operations<this, I>>;
 
     // Lifecycle
     onStart?(): void;
@@ -263,7 +263,7 @@ export abstract class Adapter<
         operation: T,
         ...args: OperationArgs<this, I, T>
     ): Promise<OperationResult<this, I, T>> {
-        const op = await this.out?.[operation];
+        const op = await this.operations?.[operation];
 
         if (typeof op !== "function") {
             throw new ERError(`Operation '${operation}' not found`, ["not_found"]);
