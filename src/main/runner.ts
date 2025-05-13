@@ -37,7 +37,7 @@ export class Runner extends EventsHandler<RunnerEvents> {
 
     private cache = new Map<string, ExtensionAdapter>();
 
-    async loadExtension(extensionInit: ExtensionAdapterInit) {
+    async mountExtension(extensionInit: ExtensionAdapterInit) {
         const extension = new ExtensionAdapter(this, {
             logLevel: this._logLevel,
             ...this._init.baseExtensionInit,
