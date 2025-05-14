@@ -99,15 +99,15 @@ type ExtensionEvents<O extends object, S extends object> = {
 /**
  * Extension Adapter.
  *
- * @template I Input interface (local)
- * @template O Output interface (remote)
+ * @template M Module API (remote)
+ * @template E Extension API (local)
  * @template S State
  * */
 export abstract class Extension<
-    I extends object = object,
-    O extends object = object,
+    M extends object = object,
+    E extends object = object,
     S extends object = any
-> extends EventsHandler<ExtensionEvents<O, S>> {
+> extends EventsHandler<ExtensionEvents<E, S>> {
     readonly id = crypto.randomUUID();
     private _logLevel: LogLevel;
     private _init: ExtensionInit<S>;
@@ -238,7 +238,7 @@ export abstract class Extension<
 
     // #### Abstract ####
 
-    abstract operations: Partial<Operations<this, I>>;
+    abstract operations: Partial<Operations<this, E>>;
 
     // Lifecycle
     onStart?(): void;
@@ -259,10 +259,10 @@ export abstract class Extension<
         return getState();
     }
 
-    async executeLocal<T extends OperationName<this, I>>(
+    async executeLocal<T extends OperationName<this, E>>(
         operation: T,
-        ...args: OperationArgs<this, I, T>
-    ): Promise<OperationResult<this, I, T>> {
+        ...args: OperationArgs<this, E, T>
+    ): Promise<OperationResult<this, E, T>> {
         const op = await this.operations?.[operation];
 
         if (typeof op !== "function") {
@@ -272,10 +272,10 @@ export abstract class Extension<
         return op.apply(this, args) as any;
     }
 
-    async execute<T extends OperationName<this, O>>(
+    async execute<T extends OperationName<this, M>>(
         operation: T,
-        ...args: OperationArgs<this, O, T>
-    ): Promise<OperationResult<this, O, T>> {
+        ...args: OperationArgs<this, M, T>
+    ): Promise<OperationResult<this, M, T>> {
         return await receiveData(
             isBrowser ? parent : self,
             "operation",

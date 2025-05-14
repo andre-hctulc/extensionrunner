@@ -62,12 +62,12 @@ type ModuleCache = {
     state: any;
 };
 
-export interface LaunchModuleOptions<O extends object = object, S extends object = any> {
+export interface LaunchModuleOptions<M extends object = object, S extends object = any> {
     /**
      * Modify the default module meta
      */
     modifyMeta?: (defaultMeta: Meta) => Meta;
-    moduleInit?: Partial<ModuleInit<O, S>>;
+    moduleInit?: Partial<ModuleInit<M, S>>;
 }
 
 export type ModulesSummary<T = void> = {
@@ -126,11 +126,11 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
     /**
      * @param path Use _null_ or empty string for the packages entry file
      */
-    async launchModule<O extends object, I extends object, MS extends object = S>(
+    async launchModule<M extends object, E extends object, MS extends object = S>(
         path: string | null,
-        operations: Operations<ExtensionAdapter, O>,
-        options?: LaunchModuleOptions<O, MS>
-    ): Promise<Module<O, I, MS>> {
+        moduleApi: Operations<ExtensionAdapter, M>,
+        options?: LaunchModuleOptions<M, MS>
+    ): Promise<Module<M, E, MS>> {
         path = relPath(path || "");
         /* ???? // important: use correct npm version for the newest worker build (extensionrunner@version) */
         const corsWorker = new CorsWorker(
@@ -146,7 +146,7 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
             JS_DELIVR_URL,
             path,
             "worker",
-            operations,
+            moduleApi,
             (options as any) || {}
         );
         return mod.start();
@@ -155,7 +155,7 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
     async launchComponent<O extends object, I extends object, MS extends object = S>(
         parentElement: Element,
         path: string,
-        out: Partial<Operations<ExtensionAdapter, O>>,
+        moduleApi: Partial<Operations<ExtensionAdapter, O>>,
         options?: LaunchModuleOptions<O, MS>
     ): Promise<Module<O, I, MS>> {
         path = relPath(path);
@@ -189,7 +189,7 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
                     origin,
                     path,
                     "iframe",
-                    out,
+                    moduleApi,
                     (options as any) || {}
                 );
                 logInfo(this._logLevel, "Component launched", mod.ref);
@@ -209,7 +209,7 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
         origin: string,
         path: string,
         windowType: "iframe" | "worker",
-        out: Partial<Operations<ExtensionAdapter, any>>,
+        operations: Partial<Operations<ExtensionAdapter, any>>,
         options: LaunchModuleOptions
     ): AnyModule {
         // create meta
@@ -242,7 +242,7 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
             origin,
             target,
             meta: meta,
-            operations: out,
+            operations,
         });
 
         // propagate events

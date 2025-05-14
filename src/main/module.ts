@@ -13,15 +13,15 @@ import { StateOptions } from "../state.js";
 import { Meta } from "../meta.js";
 
 /**
- * @template I In interface
+ * @template M Module API interface
  * @template S State
  * */
-export type ModuleInit<I extends object = object, S extends object = object> = {
+export type ModuleInit<M extends object = object, S extends object = object> = {
     origin: string;
     target: Window | Worker;
     meta: Meta;
     stateOptions?: StateOptions<S>;
-    operations: Partial<Operations<ExtensionAdapter, I>>;
+    operations: Partial<Operations<ExtensionAdapter, M>>;
     /**
      * Max time to wait for module to connect
      * @default 5000
@@ -64,20 +64,20 @@ type ModuleEvents<O extends object, S extends object> = {
 /**
  * Represents an iframe or a worker.
  *
- * @template I Input interface (local)
- * @template O Output interface (remote)
+ * @template M Module API interface
+ * @template E Extension API interface (remote)
  * @template S State
  * */
 export class Module<
-    O extends object = object,
-    I extends object = object,
+    M extends object = object,
+    E extends object = object,
     S extends object = any
-> extends EventsHandler<ModuleEvents<O, S>> {
+> extends EventsHandler<ModuleEvents<M, S>> {
     readonly id = crypto.randomUUID();
     private _logLevel: LogLevel;
-    private _init: ModuleInit<I, S>;
+    private _init: ModuleInit<M, S>;
 
-    constructor(readonly adapter: ExtensionAdapter, init: ModuleInit<I, S>) {
+    constructor(readonly adapter: ExtensionAdapter, init: ModuleInit<M, S>) {
         super();
         this._init = init;
         this._logLevel = this._init.logLevel || "error";
@@ -251,10 +251,10 @@ export class Module<
         return this._init.meta;
     }
 
-    async executeLocal<T extends OperationName<ExtensionAdapter, I>>(
+    async executeLocal<T extends OperationName<ExtensionAdapter, M>>(
         operation: T,
-        ...args: OperationArgs<ExtensionAdapter, I, T>
-    ): Promise<OperationResult<ExtensionAdapter, I, T>> {
+        ...args: OperationArgs<ExtensionAdapter, M, T>
+    ): Promise<OperationResult<ExtensionAdapter, M, T>> {
         const op = this._init.operations?.[operation];
 
         if (typeof op !== "function") {
@@ -264,10 +264,10 @@ export class Module<
         return op.apply(this.adapter, args) as any;
     }
 
-    async execute<T extends OperationName<ExtensionAdapter, O>>(
+    async execute<T extends OperationName<ExtensionAdapter, E>>(
         operation: T,
-        ...args: OperationArgs<ExtensionAdapter, O, T>
-    ): Promise<OperationArgs<ExtensionAdapter, O, T>> {
+        ...args: OperationArgs<ExtensionAdapter, E, T>
+    ): Promise<OperationResult<ExtensionAdapter, E, T>> {
         return await receiveData(
             this._init.target,
             "operation",
