@@ -1,6 +1,6 @@
 export type Operations<This, I extends object> = {
     [K in keyof I]: I[K] extends (...args: infer A) => infer R
-        ? (this: This, ...args: A) => Awaited<R> | Promise<R>
+        ? (this: This, ...args: A) => Awaited<R> | Promise<Awaited<R>>
         : never;
 };
 
