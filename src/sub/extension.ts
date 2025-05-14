@@ -61,7 +61,6 @@ export function postToParent(type: string, data: object, origin: string, transfe
 }
 
 export type ExtensionInit<S extends object = {}> = {
-    /** URL, origin of the provider app */
     provider: string;
     /**
      * Max time to wait for operation result
@@ -107,13 +106,15 @@ type ExtensionEvents<O extends object, S extends object> = {
 export abstract class Extension<
     I extends object = object,
     O extends object = object,
-    S extends object = object
+    S extends object = any
 > extends EventsHandler<ExtensionEvents<O, S>> {
     readonly id = crypto.randomUUID();
     private _logLevel: LogLevel;
+    private _init: ExtensionInit<S>;
 
-    constructor(readonly init: ExtensionInit<S>) {
+    constructor(init: ExtensionInit<S>) {
         super();
+        this._init = { ...init };
         this._listen();
         this._logLevel = init?.logLevel || "error";
     }
@@ -123,10 +124,9 @@ export abstract class Extension<
         addEventListener("message", async (e) => {
             logVerbose(this._logLevel, "Adapter received message event:", e);
 
-            // origin will be "" for modules, as the import worker is dynamically created (See ./CorsWorker.ts)
-            // e.origin="" -> origin self
-            if (e.origin !== "" && e.origin !== this.init.provider) {
-                this._err("Unauthorized - Event origin and provider origin mismatch", undefined);
+            // e.origin="" means origin self. For cors workers the origin will always be "" (see cors-worker.ts).
+            if (e.origin !== "" && origin !== "*" && e.origin !== this._init.provider) {
+                this._err("Unauthorized", undefined);
                 return;
             }
             if (typeof e?.data?.__type !== "string") return;
@@ -161,7 +161,7 @@ export abstract class Extension<
                     };
 
                     try {
-                        const result = await this.execute(operation, ...args);
+                        const result = await this.executeLocal(operation, ...args);
                         (port as MessagePort).postMessage({
                             __type: "operation:result",
                             payload: result,
@@ -215,7 +215,7 @@ export abstract class Extension<
                 if (resolved) return;
                 resolved = true;
                 return reject(new Error("Provider start timeout"));
-            }, this.init.startTimeout || 5000);
+            }, this._init.startTimeout || 5000);
 
             // await meta init (the meta init listener is defined globally, so it is guaranteed to be called before)
             addEventListener("message", (e) => {
@@ -255,11 +255,11 @@ export abstract class Extension<
         return m;
     }
 
-    get state(): Partial<S> {
+    get state(): S {
         return getState();
     }
 
-    async execute<T extends OperationName<this, I>>(
+    async executeLocal<T extends OperationName<this, I>>(
         operation: T,
         ...args: OperationArgs<this, I, T>
     ): Promise<OperationResult<this, I, T>> {
@@ -272,7 +272,7 @@ export abstract class Extension<
         return op.apply(this, args) as any;
     }
 
-    async remoteExecute<T extends OperationName<this, O>>(
+    async execute<T extends OperationName<this, O>>(
         operation: T,
         ...args: OperationArgs<this, O, T>
     ): Promise<OperationResult<this, O, T>> {
@@ -280,9 +280,9 @@ export abstract class Extension<
             isBrowser ? parent : self,
             "operation",
             { args, operation, __token: this.meta.authToken },
-            this.init.provider,
+            this._init.provider,
             [],
-            this.init.operationTimeout
+            this._init.operationTimeout
         );
     }
 
@@ -303,7 +303,7 @@ export abstract class Extension<
                 options: { merge: !options?.merge, populate: options?.populate !== false },
                 __token: this.meta.authToken,
             },
-            this.init.provider
+            this._init.provider
         );
     }
 

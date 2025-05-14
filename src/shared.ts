@@ -29,17 +29,17 @@ export async function receiveData(
             if (!resolved) reject(new Error("Operation timeout"));
         }, errTimeout || 5000);
 
-        out.onmessage = async e => {
+        out.onmessage = async (e) => {
             const data = getMessageData(e, type + ":result");
             if (data) {
                 resolved = true;
                 resolve(data.payload);
             }
         };
-        _in.onmessageerror = e => {
+        _in.onmessageerror = (e) => {
             reject(new Error("Channel Error (in)"));
         };
-        out.onmessageerror = e => {
+        out.onmessageerror = (e) => {
             reject(new Error("Channel Error (out)"));
         };
 
@@ -99,4 +99,21 @@ export function logInfo(logLevel: LogLevel, ...message: any[]) {
 
 export function logError(...message: any[]) {
     console.error(":extension-runner:", ...message);
+}
+
+export function checkOrigin(
+    origin: string,
+    allowedOrigins: string | string[] | ((origin: string) => boolean)
+) {
+    if (allowedOrigins === "*") return true;
+    if (typeof allowedOrigins === "string") {
+        return origin === allowedOrigins;
+    }
+    if (Array.isArray(allowedOrigins)) {
+        return allowedOrigins.includes(origin);
+    }
+    if (typeof allowedOrigins === "function") {
+        return allowedOrigins(origin);
+    }
+    return false;
 }

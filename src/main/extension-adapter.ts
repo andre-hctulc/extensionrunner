@@ -128,7 +128,7 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
      */
     async launchModule<O extends object, I extends object, MS extends object = S>(
         path: string | null,
-        out: Partial<Operations<ExtensionAdapter, O>>,
+        operations: Operations<ExtensionAdapter, O>,
         options?: LaunchModuleOptions<O, MS>
     ): Promise<Module<O, I, MS>> {
         path = relPath(path || "");
@@ -146,7 +146,7 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
             JS_DELIVR_URL,
             path,
             "worker",
-            out,
+            operations,
             (options as any) || {}
         );
         return mod.start();

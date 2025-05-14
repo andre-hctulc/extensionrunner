@@ -148,7 +148,7 @@ export class Module<
                         };
 
                         try {
-                            const result = await this.execute(operation, ...args);
+                            const result = await this.executeLocal(operation, ...args);
 
                             (port as MessagePort).postMessage({
                                 __type: "operation:result",
@@ -251,7 +251,7 @@ export class Module<
         return this._init.meta;
     }
 
-    async execute<T extends OperationName<ExtensionAdapter, I>>(
+    async executeLocal<T extends OperationName<ExtensionAdapter, I>>(
         operation: T,
         ...args: OperationArgs<ExtensionAdapter, I, T>
     ): Promise<OperationResult<ExtensionAdapter, I, T>> {
@@ -264,7 +264,7 @@ export class Module<
         return op.apply(this.adapter, args) as any;
     }
 
-    async remoteExecute<T extends OperationName<ExtensionAdapter, O>>(
+    async execute<T extends OperationName<ExtensionAdapter, O>>(
         operation: T,
         ...args: OperationArgs<ExtensionAdapter, O, T>
     ): Promise<OperationArgs<ExtensionAdapter, O, T>> {
