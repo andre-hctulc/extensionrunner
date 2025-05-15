@@ -1,5 +1,5 @@
 import { ERError } from "../error.js";
-import { EventsHandler } from "../events-handler.js";
+import { EREventListener, EREventType, EventsHandler } from "../events-handler.js";
 import { getMessageData, isBrowser, loadFile, LogLevel, logVerbose, receiveData } from "../shared.js";
 import type {
     OperationName,
@@ -9,6 +9,8 @@ import type {
     OperationEventPayload,
 } from "../operations.js";
 import { Meta } from "../meta.js";
+import { AnyState } from "../state.js";
+import { Adapter } from "../module.js";
 
 /*
 Runs in Worker/IFrame
@@ -60,7 +62,7 @@ export function postToParent(type: string, data: object, origin: string, transfe
     else self.postMessage({ ...data, __type: type }, origin, transfer || []);
 }
 
-export type ExtensionInit<S extends object = {}> = {
+export type WorkerAdapterInit<S extends object = {}> = {
     provider: string;
     /**
      * Max time to wait for operation result
@@ -75,45 +77,33 @@ export type ExtensionInit<S extends object = {}> = {
     logLevel?: LogLevel;
 };
 
-export interface ExtensionPushStateOptions {
-    /** @default true */
-    populate?: boolean;
-    /**
-     * Merge states instead of overwriting them
-     * @default true
-     * */
-    merge?: boolean;
-}
-
-type ExtensionEvents<O extends object, S extends object> = {
-    state_update: { state: S };
-    /**
-     * Provider called an operation
-     */
-    operation: OperationEventPayload<O, OperationName<any, O>>;
+type WorkerAdapterEvents = {
+    "state:push": { state: AnyState };
+    "operation:success": OperationEventPayload;
+    "operation:error": OperationEventPayload;
     error: { error: unknown };
-    start: undefined;
+    load: undefined;
     destroy: undefined;
 };
 
 /**
- * Extension Adapter.
+ * Adapter for connecting to the the main thread.
  *
  * @template M Module API (remote)
- * @template E Extension API (local)
+ * @template W Worker API (local)
  * @template S State
  * */
-export abstract class Extension<
+export abstract class WorkerAdapter<
     M extends object = object,
-    E extends object = object,
-    S extends object = any
-> extends EventsHandler<ExtensionEvents<E, S>> {
-    readonly id = crypto.randomUUID();
+    W extends object = object,
+    S extends object = AnyState
+> extends Adapter<S> {
     private _logLevel: LogLevel;
-    private _init: ExtensionInit<S>;
+    private _init: WorkerAdapterInit<S>;
+    private _events = new EventsHandler<WorkerAdapterEvents>();
 
-    constructor(init: ExtensionInit<S>) {
-        super();
+    constructor(init: WorkerAdapterInit<S>) {
+        super("");
         this._init = { ...init };
         this._listen();
         this._logLevel = init?.logLevel || "error";
@@ -135,7 +125,7 @@ export abstract class Extension<
 
             switch (type) {
                 case "destroy":
-                    this._emit("destroy", undefined);
+                    this._events.emit("destroy", undefined);
                     logVerbose(this._logLevel, "Adapter destroyed");
                     this.onDestroy?.();
                     break;
@@ -148,7 +138,7 @@ export abstract class Extension<
                     logVerbose(this._logLevel, "State push received: ", newState);
                     // Set state only here, so module and provider state are the in sync
                     setState(newState);
-                    this._emit("state_update", { state: e.data.state });
+                    this._events.emit("state:push", { state: e.data.state });
                     break;
 
                 case "operation":
@@ -167,7 +157,7 @@ export abstract class Extension<
                             payload: result,
                         });
                         logVerbose(this._logLevel, "Executed remotely called operation '", operation, "'");
-                        this._emit("operation", {
+                        this._events.emit("operation:success", {
                             args,
                             result,
                             error: null,
@@ -182,7 +172,7 @@ export abstract class Extension<
                             err
                         );
                         this._err("Operation Execution Error", err);
-                        this._emit("operation", {
+                        this._events.emit("operation:error", {
                             args,
                             result: undefined,
                             error: err,
@@ -198,17 +188,17 @@ export abstract class Extension<
 
     private _started = false;
 
-    async start(): Promise<this> {
-        if (this._started) return this;
+    override async start(): Promise<void> {
+        if (this._started) return;
 
         this._started = true;
 
         // Already initialized? modules are initialized before the adapter can mount (module worker src/worker.ts)
         if (getMeta()) {
-            return this;
+            return;
         }
 
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             let resolved = false;
 
             setTimeout(() => {
@@ -223,9 +213,9 @@ export abstract class Extension<
                 if (d && !resolved) {
                     resolved = true;
                     this.onStart?.();
-                    this._emit("start", undefined);
+                    this._events.emit("load", undefined);
                     logVerbose(this._logLevel, "Adapter started");
-                    resolve(this);
+                    resolve();
                 }
             });
         });
@@ -233,18 +223,15 @@ export abstract class Extension<
 
     private _err(info: string, error: unknown) {
         console.error(info, error);
-        this._emit("error", { error });
+        this._events.emit("error", { error });
     }
 
-    // #### Abstract ####
+    // ### Lifecycle ####
 
-    abstract operations: Partial<Operations<this, E>>;
-
-    // Lifecycle
     onStart?(): void;
     onDestroy?(): void;
 
-    // #### API ####
+    // #### Meta ####
 
     get meta(): Meta {
         const m = getMeta();
@@ -255,14 +242,14 @@ export abstract class Extension<
         return m;
     }
 
-    get state(): S {
-        return getState();
-    }
+    // #### Operations ####
 
-    async executeLocal<T extends OperationName<this, E>>(
+    abstract operations: Partial<Operations<this, W>>;
+
+    async executeLocal<T extends OperationName<this, W>>(
         operation: T,
-        ...args: OperationArgs<this, E, T>
-    ): Promise<OperationResult<this, E, T>> {
+        ...args: OperationArgs<this, W, T>
+    ): Promise<OperationResult<this, W, T>> {
         const op = await this.operations?.[operation];
 
         if (typeof op !== "function") {
@@ -286,29 +273,46 @@ export abstract class Extension<
         );
     }
 
-    async pushState(newState: S | undefined, options?: ExtensionPushStateOptions) {
+    // #### State ####
+
+    async pushState(newState: S) {
         /*
         The state gets set, when the provider sends a state_push message back, 
         so the states are in sync.
         See state_push
         */
 
-        // DEBUG console.log("pushState", this.id, newState);
-
         postToParent(
             "push_state",
             {
                 state: newState,
-                /* Set props explicitly to prevent unwanted data from being transferred */
-                options: { merge: !options?.merge, populate: options?.populate !== false },
                 __token: this.meta.authToken,
             },
             this._init.provider
         );
     }
+    // #### Files ####
 
     /** If the response is not ok, the `Response` will be set on the thrown error (`Error.response`) */
     async loadFile(path: string) {
         return await loadFile(this.meta.type, this.meta.name, this.meta.version, path);
+    }
+
+    // #### Events ####
+
+    on<K extends EREventType<WorkerAdapterEvents> = EREventType<WorkerAdapterEvents>>(
+        event: K | null,
+        listener: EREventListener<WorkerAdapterEvents, K>
+    ): this {
+        this._events.on(event, listener);
+        return this;
+    }
+
+    off<K extends EREventType<WorkerAdapterEvents> = EREventType<WorkerAdapterEvents>>(
+        event: K | null,
+        listener: EREventListener<WorkerAdapterEvents, K>
+    ): this {
+        this._events.off(event, listener);
+        return this;
     }
 }

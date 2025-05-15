@@ -1,5 +1,4 @@
-import { EventsHandler } from "../events-handler.js";
-import { ExtensionAdapter } from "./extension-adapter.js";
+import { Extension } from "./extension.js";
 import { logVerbose, logError, logInfo, LogLevel, receiveData } from "../shared.js";
 import type {
     OperationArgs,
@@ -9,19 +8,24 @@ import type {
     Operations,
 } from "../operations.js";
 import { ERError } from "../error.js";
-import { StateOptions } from "../state.js";
+import { AnyState, StateOptions } from "../state.js";
 import { Meta } from "../meta.js";
+import { Adapter } from "../module.js";
 
 /**
- * @template M Module API interface
+ * @template M Main API interface
  * @template S State
  * */
-export type ModuleInit<M extends object = object, S extends object = object> = {
+export type MainAdapterInit<M extends object = object, S extends object = AnyState> = {
     origin: string;
     target: Window | Worker;
     meta: Meta;
     stateOptions?: StateOptions<S>;
-    operations: Partial<Operations<ExtensionAdapter, M>>;
+    operations: Partial<Operations<Extension, M>>;
+    /**
+     * @default crypto.randomUUID()
+     */
+    id?: string;
     /**
      * Max time to wait for module to connect
      * @default 5000
@@ -38,66 +42,73 @@ export type ModuleInit<M extends object = object, S extends object = object> = {
     logLevel?: LogLevel;
 };
 
-export type AnyModule = Module<any, any, any>;
+export type AnyMainAdapter = MainAdapter<any, any, any>;
 
-type ModuleEvents<O extends object, S extends object> = {
+export interface MainAdapterEventPayloadBase {
+    adapter: AnyMainAdapter;
+}
+
+export interface MainAdapterEvents {
     /**
      * State push received
      */
-    push_state: {
+    "state:push": MainAdapterEventPayloadBase & {
         /**
          * Raw new state received from a module.
          *
          * Possibly modified by `ModuleInit.allowPopulateState`.
          * */
-        state: S;
+        state: Record<string, any>;
     };
-    load: undefined;
-    destroy: undefined;
-    error: { error: unknown };
+    "adapter:load": MainAdapterEventPayloadBase;
+    "adapter:destroy": MainAdapterEventPayloadBase;
     /**
      * Adapter called an operation
      */
-    operation: OperationEventPayload<O, OperationName<any, O>>;
-};
+    "operation:success": MainAdapterEventPayloadBase & OperationEventPayload;
+    /**
+     * Adapter called an operation
+     */
+    "operation:error": MainAdapterEventPayloadBase & OperationEventPayload;
+}
 
 /**
  * Represents an iframe or a worker.
  *
- * @template M Module API interface
- * @template E Extension API interface (remote)
+ * @template M Main API interface
+ * @template W Worker API interface
  * @template S State
  * */
-export class Module<
+export class MainAdapter<
     M extends object = object,
-    E extends object = object,
-    S extends object = any
-> extends EventsHandler<ModuleEvents<M, S>> {
-    readonly id = crypto.randomUUID();
+    W extends object = object,
+    S extends object = AnyState
+> extends Adapter<S> {
     private _logLevel: LogLevel;
-    private _init: ModuleInit<M, S>;
+    private _init: MainAdapterInit<M, S>;
 
-    constructor(readonly adapter: ExtensionAdapter, init: ModuleInit<M, S>) {
-        super();
+    constructor(readonly extension: Extension, init: MainAdapterInit<M, S>) {
+        super(init.id ?? crypto.randomUUID(), init.stateOptions?.initialState);
         this._init = init;
         this._logLevel = this._init.logLevel || "error";
-        if (init.stateOptions?.initialState) {
-            this._state = init.stateOptions?.initialState;
-        }
     }
 
     get ref() {
-        return `${this.adapter.name}/${this._init.meta.path}`;
+        return `${this.extension.name}/${this._init.meta.path}`;
     }
 
-    private started = false;
+    get runner() {
+        return this.extension.runner;
+    }
 
-    async start(): Promise<this> {
-        if (this.started) return this;
+    private _started = false;
 
-        this.started = true;
+    override async start() {
+        if (this._started) return;
 
-        return new Promise<this>((resolve, reject) => {
+        this._started = true;
+
+        return new Promise<void>((resolve, reject) => {
             // In CORS context target is Window (iframe.contentWindow)
             // We cant define target.onmessage or target.onerror on a cross origin Window
             // Thats why we listen to the message event on the global object and check the source
@@ -120,8 +131,9 @@ export class Module<
                         if (!state || typeof state !== "object")
                             return this._err("Invalid state received", e);
 
-                        const ev = this._emit("push_state", {
+                        const ev = this.runner.emit("state:push", {
                             state,
+                            adapter: this,
                         });
 
                         if (ev.defaultPrevented) {
@@ -164,11 +176,12 @@ export class Module<
                                 "'"
                             );
 
-                            this._emit("operation", {
+                            this.runner.emit("operation:success", {
                                 args,
                                 result,
                                 error: null,
                                 operation,
+                                adapter: this,
                             });
                         } catch (error) {
                             logError(
@@ -179,19 +192,22 @@ export class Module<
                                 error
                             );
 
-                            this._emit("operation", {
+                            this.runner.emit("operation:error", {
                                 args,
                                 result: undefined,
                                 error,
                                 operation,
+                                adapter: this,
                             });
                         }
 
                         break;
                     case "ready":
-                        if (!resolved) resolve(this);
-                        this._emit("load", undefined);
+                        if (!resolved) {
+                            this.runner.emit("adapter:load", { adapter: this });
+                        }
                         resolved = true;
+                        resolve();
                         break;
                 }
             };
@@ -229,7 +245,7 @@ export class Module<
 
     private _err(message: string, error: unknown) {
         logError(message, error);
-        this._emit("error", { error });
+        this.runner.emit("error", { error, adapter: this });
     }
 
     private _postMessage(type: string, data: object, transfer?: Transferable[]) {
@@ -239,35 +255,29 @@ export class Module<
         );
     }
 
-    private _state: S = {} as S;
-
     // #### API ####
-
-    get state() {
-        return this._state;
-    }
 
     get meta() {
         return this._init.meta;
     }
 
-    async executeLocal<T extends OperationName<ExtensionAdapter, M>>(
+    async executeLocal<T extends OperationName<Extension, M>>(
         operation: T,
-        ...args: OperationArgs<ExtensionAdapter, M, T>
-    ): Promise<OperationResult<ExtensionAdapter, M, T>> {
+        ...args: OperationArgs<Extension, M, T>
+    ): Promise<OperationResult<Extension, M, T>> {
         const op = this._init.operations?.[operation];
 
         if (typeof op !== "function") {
             throw new ERError(`Operation '${operation}' not found`, ["not_found"]);
         }
 
-        return op.apply(this.adapter, args) as any;
+        return op.apply(this.extension, args) as any;
     }
 
-    async execute<T extends OperationName<ExtensionAdapter, E>>(
+    async execute<T extends OperationName<Extension, W>>(
         operation: T,
-        ...args: OperationArgs<ExtensionAdapter, E, T>
-    ): Promise<OperationResult<ExtensionAdapter, E, T>> {
+        ...args: OperationArgs<Extension, W, T>
+    ): Promise<OperationResult<Extension, W, T>> {
         return await receiveData(
             this._init.target,
             "operation",
@@ -297,7 +307,6 @@ export class Module<
                 this._init.target.terminate();
             } catch (err) {}
         }
-        this._clearListener();
-        this._emit("destroy", undefined as any);
+        this.runner.emit("adapter:destroy", { adapter: this });
     }
 }

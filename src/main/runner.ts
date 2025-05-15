@@ -1,31 +1,20 @@
 import { EventsHandler } from "../events-handler.js";
 import { LogLevel } from "../shared.js";
-import { OperationEventPayload, OperationName } from "../operations.js";
-import type { ExtensionAdapterInit } from "./extension-adapter.js";
-import { ExtensionAdapter } from "./extension-adapter.js";
-import type { Module } from "./module.js";
+import type { ExtensionInit } from "./extension.js";
+import { Extension } from "./extension.js";
+import { MainEvents } from "./main-events.js";
 
 interface RunnerInit {
     /**
      * @default "error"
      */
     logLevel?: LogLevel;
-    baseExtensionInit?: Partial<ExtensionAdapterInit>;
+    baseExtensionInit?: Partial<ExtensionInit>;
 }
 
-interface ExtensionEventPayload {
-    extension: ExtensionAdapter;
-}
+export interface RunnerEvents {}
 
-interface RunnerEvents {
-    extension_load: ExtensionEventPayload;
-    extension_destroy: ExtensionEventPayload;
-    push_state: ExtensionEventPayload & { state: any; options: any; module: Module<any, any, any> };
-    operation: ExtensionEventPayload & OperationEventPayload<any, OperationName<any, any>>;
-    error: ExtensionEventPayload & { error: unknown };
-}
-
-export class Runner extends EventsHandler<RunnerEvents> {
+export class Runner extends EventsHandler<MainEvents> {
     private _logLevel: LogLevel;
     private _init: RunnerInit;
 
@@ -35,10 +24,10 @@ export class Runner extends EventsHandler<RunnerEvents> {
         this._logLevel = init?.logLevel || "error";
     }
 
-    private cache = new Map<string, ExtensionAdapter>();
+    private cache = new Map<string, Extension>();
 
-    async mountExtension(extensionInit: ExtensionAdapterInit) {
-        const extension = new ExtensionAdapter(this, {
+    async mountExtension(extensionInit: ExtensionInit) {
+        const extension = new Extension(this, {
             logLevel: this._logLevel,
             ...this._init.baseExtensionInit,
             ...extensionInit,
@@ -48,29 +37,7 @@ export class Runner extends EventsHandler<RunnerEvents> {
         } catch (err) {
             throw new Error(`Failed to load extension: ${err?.toString()}`);
         }
-        // propagate events
-        extension.addEventListener("push_state", (e) => {
-            this._emit("push_state", {
-                extension,
-                module: e.payload.module,
-                state: e.payload.state,
-                options: e.payload.module,
-            });
-        });
-        extension.addEventListener("operation", (ev) => {
-            this._emit("operation", {
-                extension,
-                ...ev.payload,
-            });
-        });
-        extension.addEventListener("destroy", (e) => {
-            this.cache.delete(extension.id);
-            this._emit("extension_destroy", { extension });
-        });
-        extension.addEventListener("error", (e) => {
-            this._emit("error", { extension, error: e.payload.error });
-        });
-        this._emit("extension_load", { extension });
+
         // cache
         this.cache.set(extension.id, extension);
 

@@ -10,3 +10,5 @@ export interface StateOptions<S extends object> {
      */
     initialState?: S;
 }
+
+export type AnyState = Record<string, any>;

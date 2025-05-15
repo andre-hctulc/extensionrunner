@@ -18,9 +18,9 @@ export type OperationArgs<This, I extends object, O extends OperationName<This, 
     ? A
     : never;
 
-export type OperationEventPayload<I extends object, O extends OperationName<any, I>> = {
-    operation: O;
-    args: OperationArgs<any, I, O>;
-    result: OperationResult<any, I, O> | undefined;
+export interface OperationEventPayload {
+    operation: string;
+    args: any[];
+    result: any;
     error: unknown;
-};
+}

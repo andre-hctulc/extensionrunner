@@ -11,6 +11,6 @@
         "declaration": true,
         "noImplicitAny": true
     },
-    "include": ["src/**/*.ts"],
+    "include": ["src/**/*.ts", "src/main/main-adapter.ts"],
     "exclude": ["**/_*.ts"]
 }

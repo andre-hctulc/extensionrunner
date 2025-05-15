@@ -1,13 +1,13 @@
-import { OperationEventPayload, Operations } from "../operations.js";
+import { Operations } from "../operations.js";
 import { CorsWorker } from "../cors-worker.js";
-import { AnyModule, Module, ModuleInit } from "./module.js";
 import { getUrl, JS_DELIVR_URL, loadFile, logInfo, LogLevel, relPath } from "../shared.js";
 import type { PackageJSON } from "../types.js";
-import { EventsHandler } from "../events-handler.js";
 import { Runner } from "./runner.js";
 import { Meta } from "../meta.js";
+import { AnyState } from "../state.js";
+import { AnyMainAdapter, MainAdapter, MainAdapterInit } from "./main-adapter.js";
 
-export type ExtensionAdapterInit = {
+export type ExtensionInit = {
     type: "github" | "npm";
     /** npm package name or git repo (:username/:repo)*/
     name: string;
@@ -22,39 +22,29 @@ export type ExtensionAdapterInit = {
      * Defaults to provider's log level.
      */
     logLevel?: LogLevel;
-    baseModuleInit?: Partial<ModuleInit<any, any>>;
+    baseAdapterInit?: Partial<MainAdapterInit<any, any>>;
 };
 
-interface ModuleEventPayload {
-    module: AnyModule;
+interface ExtensionEventPayloadBase {
+    extension: Extension;
 }
 
-interface ModulesEventPayload {
-    modules: AnyModule[];
-}
-
-interface AdapterEvents<S extends object = any> {
-    push_state: ModuleEventPayload & {
-        state: S;
-    };
-    module_load: ModuleEventPayload;
-    module_destroy: ModuleEventPayload;
-    destroy: ModulesEventPayload;
-    error: ModuleEventPayload & { error: unknown };
-    operation: ModuleEventPayload & OperationEventPayload<any, any>;
+export interface ExtensionEvents {
+    "extension:destroy": ExtensionEventPayloadBase;
+    "extension:load": ExtensionEventPayloadBase;
 }
 
 /** (id _or_ path _or_ check) _and_ !(notPath _or_ notId)  */
 export type ModulesFilter = {
     id?: string | string[];
     path?: string | string[];
-    check?: (module: AnyModule) => boolean;
+    check?: (module: AnyMainAdapter) => boolean;
     notPath?: string | string[];
     notId?: string | string[];
 };
 
 type ModuleCache = {
-    instances: Map<string, AnyModule>;
+    instances: Map<string, AnyMainAdapter>;
     /**
      * Shared state for modules with this path
      * modules can still have s different state (Module.state)
@@ -67,30 +57,29 @@ export interface LaunchModuleOptions<M extends object = object, S extends object
      * Modify the default module meta
      */
     modifyMeta?: (defaultMeta: Meta) => Meta;
-    moduleInit?: Partial<ModuleInit<M, S>>;
+    adapterInit?: Partial<MainAdapterInit<M, S>>;
 }
 
 export type ModulesSummary<T = void> = {
     result: Awaited<T>[];
-    affected: AnyModule[];
+    affected: AnyMainAdapter[];
     errors: unknown[];
-    failed: AnyModule[];
+    failed: AnyMainAdapter[];
 };
 
 /**
  * @template S Module State
  */
-export class ExtensionAdapter<S extends object = any> extends EventsHandler<AdapterEvents<S>> {
+export class Extension<S extends object = AnyState> {
     readonly url: string = "";
     private _pkg: Partial<PackageJSON> = {};
     private started = false;
     /** `<path, { instances: <Module, data>, sharedState: any }>` */
     private _cache = new Map<string, ModuleCache>();
     private _logLevel: LogLevel;
-    private _init: ExtensionAdapterInit;
+    private _init: ExtensionInit;
 
-    constructor(readonly runner: Runner, init: ExtensionAdapterInit) {
-        super();
+    constructor(readonly runner: Runner, init: ExtensionInit) {
         this._init = init;
         this._logLevel = init.logLevel || "error";
     }
@@ -125,12 +114,13 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
 
     /**
      * @param path Use _null_ or empty string for the packages entry file
+     * @throws
      */
-    async launchModule<M extends object, E extends object, MS extends object = S>(
+    async launchModule<M extends object, W extends object, MS extends object = S>(
         path: string | null,
-        moduleApi: Operations<ExtensionAdapter, M>,
+        moduleApi: Operations<Extension, M>,
         options?: LaunchModuleOptions<M, MS>
-    ): Promise<Module<M, E, MS>> {
+    ): Promise<MainAdapter<M, W, MS>> {
         path = relPath(path || "");
         /* ???? // important: use correct npm version for the newest worker build (extensionrunner@version) */
         const corsWorker = new CorsWorker(
@@ -141,7 +131,7 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
             }
         );
         await corsWorker.mount();
-        const mod: AnyModule = this._initModule(
+        const mod: AnyMainAdapter = await this._initModule(
             corsWorker.getWorker()!,
             JS_DELIVR_URL,
             path,
@@ -149,15 +139,18 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
             moduleApi,
             (options as any) || {}
         );
-        return mod.start();
+        return mod;
     }
 
-    async launchComponent<O extends object, I extends object, MS extends object = S>(
+    /**
+     * @throws
+     */
+    async launchComponent<M extends object, W extends object, MS extends object = S>(
         parentElement: Element,
         path: string,
-        moduleApi: Partial<Operations<ExtensionAdapter, O>>,
-        options?: LaunchModuleOptions<O, MS>
-    ): Promise<Module<O, I, MS>> {
+        moduleApi: Partial<Operations<Extension, M>>,
+        options?: LaunchModuleOptions<M, MS>
+    ): Promise<MainAdapter<M, W, MS>> {
         path = relPath(path);
 
         // Most CDNs do not directly serve html files, they serve the html as a string in a response. So does jsdelivr and unpkg.
@@ -181,10 +174,10 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
         // TODO more attrs?
 
         // wait for load
-        return new Promise<AnyModule>((resolve, reject) => {
+        return new Promise<AnyMainAdapter>((resolve, reject) => {
             iframe.onload = async (e) => {
                 if (!iframe.contentWindow) return reject("`contentWindow` not defined");
-                const mod: Module<O, I, MS> = this._initModule(
+                const mod: MainAdapter<M, W, MS> = await this._initModule(
                     iframe.contentWindow,
                     origin,
                     path,
@@ -193,7 +186,7 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
                     (options as any) || {}
                 );
                 logInfo(this._logLevel, "Component launched", mod.ref);
-                resolve(mod.start());
+                resolve(mod);
             };
 
             iframe.addEventListener("error", (e) => {
@@ -204,19 +197,19 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
         });
     }
 
-    private _initModule(
+    private async _initModule(
         target: Window | Worker,
         origin: string,
         path: string,
         windowType: "iframe" | "worker",
-        operations: Partial<Operations<ExtensionAdapter, any>>,
+        operations: Partial<Operations<Extension, any>>,
         options: LaunchModuleOptions
-    ): AnyModule {
+    ): Promise<AnyMainAdapter> {
         // create meta
 
         const initialState =
-            options.moduleInit?.stateOptions?.initialState ||
-            this._init.baseModuleInit?.stateOptions?.initialState ||
+            options.adapterInit?.stateOptions?.initialState ||
+            this._init.baseAdapterInit?.stateOptions?.initialState ||
             {};
 
         let meta: Meta = {
@@ -235,36 +228,17 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
 
         // create module
 
-        const mod: AnyModule = new Module(this, {
+        const mod: AnyMainAdapter = new MainAdapter(this, {
             logLevel: this._logLevel,
-            ...this._init.baseModuleInit,
-            ...options.moduleInit,
+            ...this._init.baseAdapterInit,
+            ...options.adapterInit,
             origin,
             target,
             meta: meta,
             operations,
         });
 
-        // propagate events
-
-        mod.addEventListener("operation", (ev) => {
-            this._emit("operation", { module: mod, ...ev.payload });
-        });
-
-        mod.addEventListener("push_state", async (ev) => {
-            this._emit("push_state", {
-                module: mod,
-                state: ev.payload.state as any,
-            });
-        });
-
-        mod.addEventListener("destroy", () => {
-            this._emit("module_destroy", { module: mod });
-        });
-
-        mod.addEventListener("error", (ev) => {
-            this._emit("error", { error: ev.payload.error, module: mod });
-        });
+        await mod.start();
 
         // cache
 
@@ -274,8 +248,6 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
             this._cache.set(path, { instances, state: undefined });
         }
         instances.set(mod.id, mod);
-
-        this._emit("module_load", { module: mod });
 
         logInfo(this._logLevel, "Module launched", mod.ref);
 
@@ -315,14 +287,14 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
     }
 
     async forEachModule<T>(
-        callback: (module: AnyModule) => T,
+        callback: (module: AnyMainAdapter) => T,
         options?: { filter?: ModulesFilter; parallel?: boolean }
     ): Promise<ModulesSummary<T>> {
         const result: ModulesSummary<T> = { failed: [], affected: [], result: [], errors: [] };
         const modules = options?.filter ? this.filterModules(options.filter) : this.getAllModules();
 
         if (options?.parallel) {
-            const par: { error: unknown | null; result: any; module: AnyModule }[] = await Promise.all(
+            const par: { error: unknown | null; result: any; module: AnyMainAdapter }[] = await Promise.all(
                 modules.map(async (module) => {
                     try {
                         return { error: null, result: await callback(module), module };
@@ -355,11 +327,9 @@ export class ExtensionAdapter<S extends object = any> extends EventsHandler<Adap
     }
 
     async destroy() {
-        const allModules = this.getAllModules();
         const actions = await this.forEachModule((module) => module.destroy(), { parallel: true });
         this._cache.clear();
-        this._clearListener();
-        this._emit("destroy", { modules: allModules });
+        this.runner.emit("extension:destroy", { extension: this });
         return actions;
     }
 }

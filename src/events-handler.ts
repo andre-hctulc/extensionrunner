@@ -12,18 +12,18 @@ export class EREvent<T extends string, P = any> {
     }
 }
 
-type EREventType<M extends object> = Extract<keyof M, string>;
-type EREventListener<M extends object, T extends EREventType<M>> = (
+export type EREventType<M extends object> = Extract<keyof M, string>;
+export type EREventListener<M extends object, T extends EREventType<M>> = (
     event: EREvent<T, EventPayload<M, T>>
 ) => void;
-type EventPayload<M extends object, T extends EREventType<M>> = M[T];
+export type EventPayload<M extends object, T extends EREventType<M>> = M[T];
 
 export class EventsHandler<M extends object> {
     #listeners = new Map<keyof M, Set<EREventListener<M, EREventType<M>>>>();
     #globalListeners = new Set<EREventListener<M, EREventType<M>>>();
 
-    addEventListener<T extends EREventType<M>>(
-        type: T,
+    on<T extends EREventType<M> = EREventType<M>>(
+        type: T | null,
         listener: EREventListener<M, T>
     ): EREventListener<M, T> {
         if (!type) this.#globalListeners.add(listener as any);
@@ -34,23 +34,15 @@ export class EventsHandler<M extends object> {
         return listener;
     }
 
-    addAnyListener(listener: EREventListener<M, EREventType<M>>): EREventListener<M, EREventType<M>> {
-        this.#globalListeners.add(listener as any);
-        return listener;
-    }
-
-    removeListener(type: EREventType<M> | null, listener: EREventListener<any, any>) {
+    off(type: EREventType<M> | null, listener: EREventListener<any, any>) {
         if (type === null) this.#globalListeners.delete(listener);
         else this.#listeners.get(type)?.delete(listener);
     }
 
-    protected _emit<T extends EREventType<M>>(
-        type: T,
-        payload: EventPayload<M, T>
-    ): EREvent<T, EventPayload<M, T>> {
+    emit<T extends EREventType<M>>(type: T, payload: EventPayload<M, T>): EREvent<T, EventPayload<M, T>> {
         const ev = new EREvent<T, EventPayload<M, T>>(type, payload);
-        this.#listeners.get(type)?.forEach(listener => listener(ev as any));
-        this.#globalListeners.forEach(listener => listener(ev as any));
+        this.#listeners.get(type)?.forEach((listener) => listener(ev as any));
+        this.#globalListeners.forEach((listener) => listener(ev as any));
         return ev;
     }
 
