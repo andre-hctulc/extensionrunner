@@ -1,5 +1,5 @@
 import { EventsHandler } from "../events-handler.js";
-import { LogLevel } from "../shared.js";
+import { LogLevel } from "../util.js";
 import type { ExtensionInit } from "./extension.js";
 import { Extension } from "./extension.js";
 import { MainEvents } from "./main-events.js";

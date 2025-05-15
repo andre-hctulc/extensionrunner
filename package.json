@@ -10,7 +10,7 @@
         "build": "echo worker && tsc --project worker.tsconfig.json && echo browser && tsc --project browser.tsconfig.json"
     },
     "exports": {
-        "./extension": "./dist/sub/extension.js",
+        "./worker": "./dist/worker/index.js",
         ".": "./dist/index.js"
     },
     "repository": {

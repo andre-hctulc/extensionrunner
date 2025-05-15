@@ -1,6 +1,6 @@
 import { ERError } from "../error.js";
 import { EREventListener, EREventType, EventsHandler } from "../events-handler.js";
-import { getMessageData, isBrowser, loadFile, LogLevel, logVerbose, receiveData } from "../shared.js";
+import { getMessageData, isBrowser, loadFile, LogLevel, logVerbose, receiveData } from "../util.js";
 import type {
     OperationName,
     OperationArgs,

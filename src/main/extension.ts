@@ -1,6 +1,6 @@
 import { Operations } from "../operations.js";
 import { CorsWorker } from "../cors-worker.js";
-import { getUrl, JS_DELIVR_URL, loadFile, logInfo, LogLevel, relPath } from "../shared.js";
+import { getUrl, JS_DELIVR_URL, loadFile, logInfo, LogLevel, relPath } from "../util.js";
 import type { PackageJSON } from "../types.js";
 import { Runner } from "./runner.js";
 import { Meta } from "../meta.js";

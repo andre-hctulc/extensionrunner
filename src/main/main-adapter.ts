@@ -1,5 +1,5 @@
 import { Extension } from "./extension.js";
-import { logVerbose, logError, logInfo, LogLevel, receiveData } from "../shared.js";
+import { logVerbose, logError, logInfo, LogLevel, receiveData } from "../util.js";
 import type {
     OperationArgs,
     OperationEventPayload,
